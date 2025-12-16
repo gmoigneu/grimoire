@@ -21,7 +21,7 @@ impl Database {
         Ok(db)
     }
 
-    fn db_path() -> Result<PathBuf> {
+    pub fn db_path() -> Result<PathBuf> {
         let proj_dirs = directories::ProjectDirs::from("", "", "grimoire")
             .ok_or_else(|| color_eyre::eyre::eyre!("Could not determine home directory"))?;
 

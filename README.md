@@ -7,6 +7,8 @@ A terminal user interface (TUI) application for managing prompts, agents, and sk
 ![Rust](https://img.shields.io/badge/rust-2024-orange.svg)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
+![grimoire](./grimoire.gif)
+
 ## Features
 
 - Manage and organize your LLM prompts in a searchable database

@@ -1,3 +1,4 @@
+use crate::db::Database;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -275,12 +276,12 @@ fn draw_content(frame: &mut Frame, area: Rect, state: &SettingsState) -> Rect {
     let data_inner = data_block.inner(chunks[2]);
     frame.render_widget(data_block, chunks[2]);
 
+    let db_path = Database::db_path()
+        .map(|p| p.display().to_string())
+        .unwrap_or_else(|_| "unknown".to_string());
     let data_info = Paragraph::new(vec![Line::from(vec![
         Span::styled("Database: ", Style::default().fg(Color::Yellow)),
-        Span::styled(
-            "~/.local/share/grimoire/grimoire.db",
-            Style::default().fg(Color::DarkGray),
-        ),
+        Span::styled(db_path, Style::default().fg(Color::DarkGray)),
     ])]);
     frame.render_widget(data_info, data_inner);
 
