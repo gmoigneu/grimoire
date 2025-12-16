@@ -25,8 +25,7 @@ impl Database {
         let proj_dirs = directories::ProjectDirs::from("", "", "grimoire")
             .ok_or_else(|| color_eyre::eyre::eyre!("Could not determine home directory"))?;
 
-            Ok(proj_dirs.data_dir().join("grimoire.db"))
-        }
+        Ok(proj_dirs.data_dir().join("grimoire.db"))
     }
 
     fn init_schema(&self) -> Result<()> {
