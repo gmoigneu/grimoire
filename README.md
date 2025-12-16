@@ -17,6 +17,20 @@ A terminal user interface (TUI) application for managing prompts, agents, and sk
 
 ## Installation
 
+### Homebrew (macOS/Linux)
+
+```bash
+brew tap gmoigneu/grimoire
+brew install grimoire
+```
+
+### Download Binary
+
+Pre-built binaries are available on the [Releases](https://github.com/gmoigneu/grimoire/releases) page for:
+- Linux (x86_64, aarch64)
+- macOS (Intel, Apple Silicon)
+- Windows (x86_64)
+
 ### From Source
 
 ```bash

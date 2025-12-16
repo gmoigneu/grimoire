@@ -1,0 +1,105 @@
+name: Update Homebrew Formula
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Get version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Download release assets and compute SHA256
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+
+          # Download and compute SHA256 for each platform
+          gh release download ${{ github.ref_name }} -p "grimoire-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz"
+          echo "SHA_MACOS_INTEL=$(sha256sum grimoire-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz | cut -d' ' -f1)" >> $GITHUB_ENV
+
+          gh release download ${{ github.ref_name }} -p "grimoire-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz"
+          echo "SHA_MACOS_ARM=$(sha256sum grimoire-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz | cut -d' ' -f1)" >> $GITHUB_ENV
+
+          gh release download ${{ github.ref_name }} -p "grimoire-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz"
+          echo "SHA_LINUX_INTEL=$(sha256sum grimoire-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz | cut -d' ' -f1)" >> $GITHUB_ENV
+
+          gh release download ${{ github.ref_name }} -p "grimoire-${{ github.ref_name }}-aarch64-unknown-linux-gnu.tar.gz"
+          echo "SHA_LINUX_ARM=$(sha256sum grimoire-${{ github.ref_name }}-aarch64-unknown-linux-gnu.tar.gz | cut -d' ' -f1)" >> $GITHUB_ENV
+
+      - name: Update formula
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+
+          cat > Formula/grimoire.rb << 'EOF'
+          # Homebrew Formula for GRIMOIRE
+          #
+          # Users can install with:
+          #   brew tap gmoigneu/grimoire
+          #   brew install grimoire
+
+          class Grimoire < Formula
+            desc "TUI for managing prompts, agents, and skills configuration"
+            homepage "https://github.com/gmoigneu/grimoire"
+            license "Apache-2.0"
+            version "VERSION_PLACEHOLDER"
+
+            on_macos do
+              on_intel do
+                url "https://github.com/gmoigneu/grimoire/releases/download/vVERSION_PLACEHOLDER/grimoire-vVERSION_PLACEHOLDER-x86_64-apple-darwin.tar.gz"
+                sha256 "SHA_MACOS_INTEL_PLACEHOLDER"
+              end
+
+              on_arm do
+                url "https://github.com/gmoigneu/grimoire/releases/download/vVERSION_PLACEHOLDER/grimoire-vVERSION_PLACEHOLDER-aarch64-apple-darwin.tar.gz"
+                sha256 "SHA_MACOS_ARM_PLACEHOLDER"
+              end
+            end
+
+            on_linux do
+              on_intel do
+                url "https://github.com/gmoigneu/grimoire/releases/download/vVERSION_PLACEHOLDER/grimoire-vVERSION_PLACEHOLDER-x86_64-unknown-linux-gnu.tar.gz"
+                sha256 "SHA_LINUX_INTEL_PLACEHOLDER"
+              end
+
+              on_arm do
+                url "https://github.com/gmoigneu/grimoire/releases/download/vVERSION_PLACEHOLDER/grimoire-vVERSION_PLACEHOLDER-aarch64-unknown-linux-gnu.tar.gz"
+                sha256 "SHA_LINUX_ARM_PLACEHOLDER"
+              end
+            end
+
+            def install
+              bin.install "grimoire"
+            end
+
+            test do
+              assert_match "grimoire", shell_output("#{bin}/grimoire --version")
+            end
+          end
+          EOF
+
+          # Replace placeholders
+          sed -i "s/VERSION_PLACEHOLDER/${VERSION}/g" Formula/grimoire.rb
+          sed -i "s/SHA_MACOS_INTEL_PLACEHOLDER/${SHA_MACOS_INTEL}/g" Formula/grimoire.rb
+          sed -i "s/SHA_MACOS_ARM_PLACEHOLDER/${SHA_MACOS_ARM}/g" Formula/grimoire.rb
+          sed -i "s/SHA_LINUX_INTEL_PLACEHOLDER/${SHA_LINUX_INTEL}/g" Formula/grimoire.rb
+          sed -i "s/SHA_LINUX_ARM_PLACEHOLDER/${SHA_LINUX_ARM}/g" Formula/grimoire.rb
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/grimoire.rb
+          git commit -m "Update Homebrew formula to ${{ github.ref_name }}"
+          git push

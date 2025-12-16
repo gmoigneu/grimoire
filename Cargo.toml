@@ -2,6 +2,13 @@
 name = "grimoire"
 version = "0.1.0"
 edition = "2021"
+authors = ["Guillaume Moigneu <guillaume@moigneu.com>"]
+description = "A TUI for managing prompts, agents, and skills configuration"
+license = "Apache-2.0"
+repository = "https://github.com/gmoigneu/grimoire"
+homepage = "https://github.com/gmoigneu/grimoire"
+keywords = ["tui", "cli", "prompts", "llm", "ai"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 ratatui = "0.29"
