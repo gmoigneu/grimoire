@@ -89,6 +89,18 @@ cargo clippy
 cargo fmt
 ```
 
+## Development
+
+### Generate Fixture Data
+
+To populate the database with sample data for testing:
+
+```bash
+./scripts/generate_fixtures.sh
+```
+
+This creates 200 sample items (prompts, agents, skills, and commands) with varied content and tags. The application must be run at least once before generating fixtures to create the database.
+
 ## Project Structure
 
 ```
