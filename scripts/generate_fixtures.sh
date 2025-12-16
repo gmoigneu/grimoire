@@ -3,7 +3,22 @@
 # Generate fixture data for GRIMOIRE
 # Creates 200 items across all categories
 
-DB_PATH="${HOME}/.local/share/grimoire/grimoire.db"
+# Detect OS and set appropriate database path
+case "$(uname -s)" in
+    Darwin)
+        DB_PATH="${HOME}/Library/Application Support/grimoire/grimoire.db"
+        ;;
+    Linux)
+        DB_PATH="${HOME}/.local/share/grimoire/grimoire.db"
+        ;;
+    MINGW*|MSYS*|CYGWIN*)
+        DB_PATH="${APPDATA}/grimoire/grimoire.db"
+        ;;
+    *)
+        echo "Unsupported OS: $(uname -s)"
+        exit 1
+        ;;
+esac
 
 # Check if database exists
 if [ ! -f "$DB_PATH" ]; then

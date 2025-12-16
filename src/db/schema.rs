@@ -21,17 +21,9 @@ impl Database {
         Ok(db)
     }
 
-    fn db_path() -> Result<PathBuf> {
-        // Use local database in project directory during development
-        #[cfg(debug_assertions)]
-        {
-            return Ok(PathBuf::from("grimoire-dev.db"));
-        }
-
-        #[cfg(not(debug_assertions))]
-        {
-            let proj_dirs = directories::ProjectDirs::from("", "", "grimoire")
-                .ok_or_else(|| color_eyre::eyre::eyre!("Could not determine home directory"))?;
+    pub fn db_path() -> Result<PathBuf> {
+        let proj_dirs = directories::ProjectDirs::from("", "", "grimoire")
+            .ok_or_else(|| color_eyre::eyre::eyre!("Could not determine home directory"))?;
 
             Ok(proj_dirs.data_dir().join("grimoire.db"))
         }

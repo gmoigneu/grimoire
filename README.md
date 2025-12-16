@@ -1,4 +1,4 @@
-# GRIMOIRE
+# G.R.I.M.O.I.R.E.
 
 **G**lobal **R**epository and **I**ndex for **M**odel **O**perations, **I**nstructions and **R**esponse **E**ngineering
 
@@ -6,6 +6,8 @@ A terminal user interface (TUI) application for managing prompts, agents, and sk
 
 ![Rust](https://img.shields.io/badge/rust-2024-orange.svg)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
+![grimoire](./grimoire.gif)
 
 ## Features
 
