@@ -58,17 +58,91 @@ cargo run
 
 ### Keyboard Shortcuts
 
+#### Main Screen
+
 | Key | Action |
 |-----|--------|
-| `q` / `Esc` | Quit / Go back |
+| `q` | Quit |
 | `j` / `Down` | Move down |
 | `k` / `Up` | Move up |
-| `Enter` | Select / Confirm |
+| `h` / `Left` | Focus categories |
+| `l` / `Right` | Focus item list |
+| `Enter` | View selected item |
 | `n` | New item |
 | `e` | Edit item |
-| `d` | Delete item |
+| `c` / `yy` | Copy item to clipboard |
+| `dd` | Delete item |
+| `x` | Export item |
 | `/` | Search |
+| `s` | Settings |
 | `?` | Help |
+| `gg` | Go to top |
+| `G` | Go to bottom |
+| `Ctrl+d` | Page down |
+| `Ctrl+u` | Page up |
+| `0` | Show all categories |
+| `1` | Filter: Prompts |
+| `2` | Filter: Agents |
+| `3` | Filter: Skills |
+| `4` | Filter: Commands |
+
+#### View Screen
+
+| Key | Action |
+|-----|--------|
+| `q` / `Esc` | Back to list |
+| `j` / `Down` | Scroll down |
+| `k` / `Up` | Scroll up |
+| `e` | Edit item |
+| `c` / `yy` | Copy to clipboard |
+| `dd` | Delete item |
+| `x` | Export item |
+| `h` | View history |
+| `L` | Go to latest version |
+| `Ctrl+a` | AI improve prompt |
+
+#### Edit Screen
+
+| Key | Action |
+|-----|--------|
+| `Esc` | Cancel and go back |
+| `Tab` | Next field |
+| `Shift+Tab` | Previous field |
+| `Ctrl+s` | Save |
+| `Ctrl+a` | AI improve (content field) |
+| `Enter` | Newline (in content) / Toggle (dropdowns) |
+| `Space` | Toggle dropdown options |
+
+#### Search
+
+| Key | Action |
+|-----|--------|
+| `Esc` | Close search |
+| `Enter` | Select result |
+| `j` / `Down` | Next result |
+| `k` / `Up` | Previous result |
+| `c` | Copy selected to clipboard |
+
+#### Settings
+
+| Key | Action |
+|-----|--------|
+| `q` / `Esc` | Close settings |
+| `Tab` | Next field |
+| `Shift+Tab` | Previous field |
+| `Ctrl+s` | Save settings |
+| `Enter` / `Space` | Toggle dropdown |
+| `Left` / `Right` | Change dropdown selection |
+
+#### History Popup
+
+| Key | Action |
+|-----|--------|
+| `q` / `Esc` | Close |
+| `j` / `Down` | Next version |
+| `k` / `Up` | Previous version |
+| `Enter` | View version |
+| `r` | Restore version |
 
 ## Configuration
 
