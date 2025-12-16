@@ -2,7 +2,7 @@ pub use crate::models::{Category, Item};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Line, Span},
+    text::{Line, Span, Text},
     widgets::{Block, Borders, Clear, Paragraph, Wrap},
     Frame,
 };
@@ -507,9 +507,9 @@ fn draw_content_field(frame: &mut Frame, area: Rect, state: &EditState) {
 
     let content = &state.item.content;
     let paragraph = if focused {
-        // Show with cursor while preserving line breaks
-        let lines = render_multiline_with_cursor(content, state.cursor_pos);
-        Paragraph::new(lines)
+        // Show with cursor - render content with cursor character highlighted
+        let text = render_text_with_cursor(content, state.cursor_pos);
+        Paragraph::new(text)
     } else {
         Paragraph::new(content.as_str())
     };
@@ -517,81 +517,81 @@ fn draw_content_field(frame: &mut Frame, area: Rect, state: &EditState) {
     frame.render_widget(paragraph.wrap(Wrap { trim: false }).scroll((state.content_scroll, 0)), inner);
 }
 
-/// Render multiline text with a cursor at the given position
-fn render_multiline_with_cursor(content: &str, cursor_pos: usize) -> Vec<Line<'static>> {
-    // Split content into lines, preserving empty lines
-    let text_lines: Vec<&str> = content.split('\n').collect();
-    let mut result: Vec<Line<'static>> = Vec::new();
+/// Render text with a cursor at the given position, preserving newlines naturally
+fn render_text_with_cursor(content: &str, cursor_pos: usize) -> Text<'static> {
+    let chars: Vec<char> = content.chars().collect();
+    let cursor_pos = cursor_pos.min(chars.len());
 
-    // Find which line and column the cursor is on
-    let mut char_count = 0;
-    let mut cursor_line = 0;
-    let mut cursor_col = 0;
+    let before: String = chars.iter().take(cursor_pos).collect();
+    let cursor_char = chars.get(cursor_pos).copied().unwrap_or(' ');
+    let after: String = chars.iter().skip(cursor_pos + 1).collect();
 
-    for (line_idx, line) in text_lines.iter().enumerate() {
-        let line_start = char_count;
-        let line_end = char_count + line.chars().count();
+    let mut lines: Vec<Line<'static>> = Vec::new();
 
-        if cursor_pos >= line_start && cursor_pos <= line_end {
-            cursor_line = line_idx;
-            cursor_col = cursor_pos - line_start;
-            break;
-        }
+    // Process "before" text - split by newlines
+    let before_lines: Vec<&str> = before.split('\n').collect();
 
-        // +1 for the newline character (except for last line)
-        char_count = line_end + 1;
-        cursor_line = line_idx + 1;
-        cursor_col = 0;
-    }
-
-    // Render each line
-    for (line_idx, line_text) in text_lines.iter().enumerate() {
-        if line_idx == cursor_line {
-            // This line has the cursor
-            let chars: Vec<char> = line_text.chars().collect();
-            let col = cursor_col.min(chars.len());
-
-            let before: String = chars.iter().take(col).collect();
-            let after: String = chars.iter().skip(col + 1).collect();
-
-            // Build spans, avoiding empty ones that can cause rendering issues
-            let mut spans = Vec::new();
-            if !before.is_empty() {
-                spans.push(Span::raw(before));
-            }
-
-            // For cursor character: use actual char if available, space if at end/empty line
-            let cursor_char = chars.get(col).copied().unwrap_or(' ');
-            spans.push(Span::styled(
-                cursor_char.to_string(),
-                Style::default().bg(Color::White).fg(Color::Black),
-            ));
-
-            if !after.is_empty() {
-                spans.push(Span::raw(after));
-            }
-
-            result.push(Line::from(spans));
+    for (i, line) in before_lines.iter().enumerate() {
+        if i < before_lines.len() - 1 {
+            // Not the last segment, so this was followed by a newline
+            lines.push(Line::raw(line.to_string()));
         } else {
-            // No cursor on this line - ensure empty lines still have height
-            // by using a space character (invisible but maintains line height)
-            if line_text.is_empty() {
-                result.push(Line::raw(" "));
+            // Last segment - cursor comes after this on same line
+            let mut spans = vec![Span::raw(line.to_string())];
+
+            // If cursor is on a newline, show space cursor and start new line for after
+            if cursor_char == '\n' {
+                spans.push(Span::styled(
+                    " ".to_string(),
+                    Style::default().bg(Color::White).fg(Color::Black),
+                ));
+                lines.push(Line::from(spans));
+
+                // After content goes on subsequent lines
+                let after_lines: Vec<&str> = after.split('\n').collect();
+                for after_line in after_lines.iter() {
+                    lines.push(Line::raw(after_line.to_string()));
+                }
             } else {
-                result.push(Line::raw(line_text.to_string()));
+                // Cursor is on a regular character
+                spans.push(Span::styled(
+                    cursor_char.to_string(),
+                    Style::default().bg(Color::White).fg(Color::Black),
+                ));
+
+                // Process "after" text
+                let after_lines: Vec<&str> = after.split('\n').collect();
+                if !after_lines.is_empty() {
+                    // First part of after goes on same line as cursor
+                    spans.push(Span::raw(after_lines[0].to_string()));
+                    lines.push(Line::from(spans));
+
+                    // Remaining lines
+                    for after_line in after_lines.iter().skip(1) {
+                        lines.push(Line::raw(after_line.to_string()));
+                    }
+                } else {
+                    lines.push(Line::from(spans));
+                }
             }
         }
     }
 
-    // Ensure at least one line
-    if result.is_empty() {
-        result.push(Line::from(Span::styled(
+    // Handle empty content
+    if lines.is_empty() {
+        lines.push(Line::from(Span::styled(
             " ".to_string(),
             Style::default().bg(Color::White).fg(Color::Black),
         )));
     }
 
-    result
+    Text::from(lines)
+}
+
+/// Render multiline text with a cursor at the given position (for description field)
+fn render_multiline_with_cursor(content: &str, cursor_pos: usize) -> Vec<Line<'static>> {
+    let text = render_text_with_cursor(content, cursor_pos);
+    text.lines.into_iter().collect()
 }
 
 fn draw_status_bar(frame: &mut Frame, area: Rect, state: &EditState) {
