@@ -139,17 +139,20 @@ pub fn draw(frame: &mut Frame, state: &AiPopupState, content_preview: &str, has_
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Header
-            Constraint::Length(6),  // Actions
-            Constraint::Length(3),  // Custom input (if selected)
-            Constraint::Min(3),     // Preview/Result
-            Constraint::Length(1),  // Status bar
+            Constraint::Length(3), // Header
+            Constraint::Length(6), // Actions
+            Constraint::Length(3), // Custom input (if selected)
+            Constraint::Min(3),    // Preview/Result
+            Constraint::Length(1), // Status bar
         ])
         .split(inner);
 
     // Header
-    let header = Paragraph::new("How can I help?")
-        .style(Style::default().fg(Color::White).add_modifier(Modifier::BOLD));
+    let header = Paragraph::new("How can I help?").style(
+        Style::default()
+            .fg(Color::White)
+            .add_modifier(Modifier::BOLD),
+    );
     frame.render_widget(header, chunks[0]);
 
     // Actions
@@ -181,12 +184,20 @@ fn draw_no_llm_warning(frame: &mut Frame, area: Rect) {
         .split(area);
 
     let warning_icon = Paragraph::new("⚠")
-        .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+        .style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )
         .alignment(ratatui::layout::Alignment::Center);
     frame.render_widget(warning_icon, chunks[1]);
 
     let message = Paragraph::new("No LLM API key configured")
-        .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+        .style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )
         .alignment(ratatui::layout::Alignment::Center);
     frame.render_widget(message, chunks[2]);
 
@@ -211,7 +222,9 @@ fn draw_actions(frame: &mut Frame, area: Rect, state: &AiPopupState) {
         let prefix = if is_selected { "> " } else { "  " };
 
         let style = if is_selected {
-            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::default()
         };
@@ -239,7 +252,10 @@ fn draw_custom_input(frame: &mut Frame, area: Rect, state: &AiPopupState) {
 
     let line = Line::from(vec![
         Span::raw(before),
-        Span::styled(cursor_char.to_string(), Style::default().bg(Color::White).fg(Color::Black)),
+        Span::styled(
+            cursor_char.to_string(),
+            Style::default().bg(Color::White).fg(Color::Black),
+        ),
         Span::raw(after),
     ]);
 
@@ -257,14 +273,17 @@ fn draw_result(frame: &mut Frame, area: Rect, state: &AiPopupState, content_prev
     let block = Block::default()
         .title(title)
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(if state.is_loading { Color::Yellow } else { Color::DarkGray }));
+        .border_style(Style::default().fg(if state.is_loading {
+            Color::Yellow
+        } else {
+            Color::DarkGray
+        }));
 
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
     let content = if state.is_loading {
-        Paragraph::new("Waiting for AI response...")
-            .style(Style::default().fg(Color::Yellow))
+        Paragraph::new("Waiting for AI response...").style(Style::default().fg(Color::Yellow))
     } else if let Some(ref error) = state.error {
         Paragraph::new(error.as_str())
             .style(Style::default().fg(Color::Red))
@@ -292,16 +311,9 @@ fn draw_status_bar(frame: &mut Frame, area: Rect, state: &AiPopupState) {
     let shortcuts = if state.is_loading {
         vec![("", "Processing...")]
     } else if state.result.is_some() {
-        vec![
-            ("Enter ", "apply"),
-            ("ESC ", "cancel"),
-        ]
+        vec![("Enter ", "apply"), ("ESC ", "cancel")]
     } else {
-        vec![
-            ("j/k ", "select"),
-            ("Enter ", "run"),
-            ("ESC ", "close"),
-        ]
+        vec![("j/k ", "select"), ("Enter ", "run"), ("ESC ", "close")]
     };
 
     let spans: Vec<Span> = shortcuts
@@ -312,7 +324,10 @@ fn draw_status_bar(frame: &mut Frame, area: Rect, state: &AiPopupState) {
             } else {
                 vec![
                     Span::styled(*key, Style::default().fg(Color::Yellow)),
-                    Span::styled(format!("{}  ", action), Style::default().fg(Color::DarkGray)),
+                    Span::styled(
+                        format!("{}  ", action),
+                        Style::default().fg(Color::DarkGray),
+                    ),
                 ]
             }
         })

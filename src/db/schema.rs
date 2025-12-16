@@ -128,10 +128,8 @@ impl Database {
             .is_ok();
 
         if !has_version_column {
-            self.conn.execute(
-                "ALTER TABLE items ADD COLUMN version INTEGER DEFAULT 1",
-                [],
-            )?;
+            self.conn
+                .execute("ALTER TABLE items ADD COLUMN version INTEGER DEFAULT 1", [])?;
         }
 
         Ok(())

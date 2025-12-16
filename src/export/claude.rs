@@ -21,7 +21,9 @@ impl ClaudeExporter {
             path.to_path_buf()
         };
 
-        Self { base_path: expanded }
+        Self {
+            base_path: expanded,
+        }
     }
 
     pub fn export(&self, item: &Item) -> Result<PathBuf> {
@@ -67,9 +69,7 @@ impl ClaudeExporter {
     }
 
     fn format_agent(&self, item: &Item) -> String {
-        let mut frontmatter = vec![
-            format!("name: {}", item.name),
-        ];
+        let mut frontmatter = vec![format!("name: {}", item.name)];
 
         if let Some(ref desc) = item.description {
             frontmatter.push(format!("description: {}", desc));
@@ -91,11 +91,7 @@ impl ClaudeExporter {
             frontmatter.push(format!("skills: {}", skills));
         }
 
-        format!(
-            "---\n{}\n---\n\n{}",
-            frontmatter.join("\n"),
-            item.content
-        )
+        format!("---\n{}\n---\n\n{}", frontmatter.join("\n"), item.content)
     }
 
     fn format_command(&self, item: &Item) -> String {
@@ -120,18 +116,12 @@ impl ClaudeExporter {
         if frontmatter.is_empty() {
             item.content.clone()
         } else {
-            format!(
-                "---\n{}\n---\n\n{}",
-                frontmatter.join("\n"),
-                item.content
-            )
+            format!("---\n{}\n---\n\n{}", frontmatter.join("\n"), item.content)
         }
     }
 
     fn format_skill(&self, item: &Item) -> String {
-        let mut frontmatter = vec![
-            format!("name: {}", item.name),
-        ];
+        let mut frontmatter = vec![format!("name: {}", item.name)];
 
         if let Some(ref desc) = item.description {
             frontmatter.push(format!("description: {}", desc));
@@ -141,11 +131,7 @@ impl ClaudeExporter {
             frontmatter.push(format!("allowed-tools: {}", tools));
         }
 
-        format!(
-            "---\n{}\n---\n\n{}",
-            frontmatter.join("\n"),
-            item.content
-        )
+        format!("---\n{}\n---\n\n{}", frontmatter.join("\n"), item.content)
     }
 }
 

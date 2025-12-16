@@ -11,17 +11,16 @@ use ratatui::{
 pub struct ViewState {
     pub scroll: u16,
     pub max_scroll: u16,
-    pub viewing_version: Option<i64>,  // None means latest/current
-    pub max_version: i64,              // Current/latest version number
+    pub viewing_version: Option<i64>, // None means latest/current
+    pub max_version: i64,             // Current/latest version number
 }
-
 
 pub fn draw(frame: &mut Frame, item: Option<&Item>, view_state: &mut ViewState) {
     let item = match item {
         Some(item) => item,
         None => {
-            let msg = Paragraph::new("No item selected")
-                .style(Style::default().fg(Color::DarkGray));
+            let msg =
+                Paragraph::new("No item selected").style(Style::default().fg(Color::DarkGray));
             frame.render_widget(msg, frame.area());
             return;
         }
@@ -32,20 +31,20 @@ pub fn draw(frame: &mut Frame, item: Option<&Item>, view_state: &mut ViewState) 
 
     let constraints = if is_viewing_old {
         vec![
-            Constraint::Length(1),  // Title bar
-            Constraint::Length(1),  // Version warning banner
-            Constraint::Length(9),  // Metadata section
-            Constraint::Length(5),  // Description section
-            Constraint::Min(0),     // Content section
-            Constraint::Length(1),  // Status bar
+            Constraint::Length(1), // Title bar
+            Constraint::Length(1), // Version warning banner
+            Constraint::Length(9), // Metadata section
+            Constraint::Length(5), // Description section
+            Constraint::Min(0),    // Content section
+            Constraint::Length(1), // Status bar
         ]
     } else {
         vec![
-            Constraint::Length(1),  // Title bar
-            Constraint::Length(9),  // Metadata section
-            Constraint::Length(5),  // Description section
-            Constraint::Min(0),     // Content section
-            Constraint::Length(1),  // Status bar
+            Constraint::Length(1), // Title bar
+            Constraint::Length(9), // Metadata section
+            Constraint::Length(5), // Description section
+            Constraint::Min(0),    // Content section
+            Constraint::Length(1), // Status bar
         ]
     };
 
@@ -57,7 +56,12 @@ pub fn draw(frame: &mut Frame, item: Option<&Item>, view_state: &mut ViewState) 
     // Title bar
     let title = format!(" {}: {} ", item.category.display_name(), item.name);
     let title_bar = Paragraph::new(Line::from(vec![
-        Span::styled(title, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            title,
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw("                                                        "),
         Span::styled("[ESC] Back", Style::default().fg(Color::DarkGray)),
     ]));
@@ -71,7 +75,10 @@ pub fn draw(frame: &mut Frame, item: Option<&Item>, view_state: &mut ViewState) 
         let banner = Paragraph::new(Line::from(vec![
             Span::styled(" ⚠ ", Style::default().fg(Color::Yellow)),
             Span::styled(
-                format!("Viewing version {} of {}  ", viewing_v, view_state.max_version),
+                format!(
+                    "Viewing version {} of {}  ",
+                    viewing_v, view_state.max_version
+                ),
                 Style::default().fg(Color::Yellow),
             ),
             Span::styled("[L] Go to latest", Style::default().fg(Color::Cyan)),
@@ -98,7 +105,6 @@ pub fn draw(frame: &mut Frame, item: Option<&Item>, view_state: &mut ViewState) 
 }
 
 fn draw_metadata(frame: &mut Frame, area: Rect, item: &Item, view_state: &ViewState) {
-
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::DarkGray));
@@ -124,7 +130,10 @@ fn draw_metadata(frame: &mut Frame, area: Rect, item: &Item, view_state: &ViewSt
         ]),
         Line::from(vec![
             Span::styled("Version:     ", Style::default().fg(Color::Yellow)),
-            Span::styled(format!("v{}", version_display), Style::default().fg(Color::Cyan)),
+            Span::styled(
+                format!("v{}", version_display),
+                Style::default().fg(Color::Cyan),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Tags:        ", Style::default().fg(Color::Yellow)),
@@ -189,13 +198,15 @@ fn draw_metadata(frame: &mut Frame, area: Rect, item: &Item, view_state: &ViewSt
 }
 
 fn draw_description(frame: &mut Frame, area: Rect, item: &Item) {
-
     let block = Block::default()
         .title(" Description ")
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::DarkGray));
 
-    let desc = item.description.clone().unwrap_or_else(|| "No description".to_string());
+    let desc = item
+        .description
+        .clone()
+        .unwrap_or_else(|| "No description".to_string());
     let paragraph = Paragraph::new(desc)
         .block(block)
         .wrap(Wrap { trim: true })
@@ -209,7 +220,6 @@ fn draw_description(frame: &mut Frame, area: Rect, item: &Item) {
 }
 
 fn draw_content(frame: &mut Frame, area: Rect, item: &Item, view_state: &mut ViewState) {
-
     let block = Block::default()
         .title(" Content ")
         .borders(Borders::ALL)
@@ -239,7 +249,10 @@ fn draw_content(frame: &mut Frame, area: Rect, item: &Item, view_state: &mut Vie
 
         frame.render_stateful_widget(
             scrollbar,
-            area.inner(ratatui::layout::Margin { vertical: 1, horizontal: 0 }),
+            area.inner(ratatui::layout::Margin {
+                vertical: 1,
+                horizontal: 0,
+            }),
             &mut scrollbar_state,
         );
     }
@@ -257,24 +270,22 @@ fn draw_status_bar(frame: &mut Frame, area: Rect, is_viewing_old: bool) {
         shortcuts.push(("L ", "latest"));
     }
 
-    shortcuts.extend([
-        ("x ", "export"),
-        ("dd ", "delete"),
-        ("ESC ", "back"),
-    ]);
+    shortcuts.extend([("x ", "export"), ("dd ", "delete"), ("ESC ", "back")]);
 
     let spans: Vec<Span> = shortcuts
         .iter()
         .flat_map(|(key, action)| {
             vec![
                 Span::styled(*key, Style::default().fg(Color::Yellow)),
-                Span::styled(format!("{}  ", action), Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    format!("{}  ", action),
+                    Style::default().fg(Color::DarkGray),
+                ),
             ]
         })
         .collect();
 
-    let status = Paragraph::new(Line::from(spans))
-        .style(Style::default().bg(Color::Black));
+    let status = Paragraph::new(Line::from(spans)).style(Style::default().bg(Color::Black));
 
     frame.render_widget(status, area);
 }

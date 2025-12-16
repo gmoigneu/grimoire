@@ -105,6 +105,14 @@ cargo fmt
 
 ## Development
 
+### Setup
+
+Enable git hooks for format checking on commit:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ### Generate Fixture Data
 
 To populate the database with sample data for testing:

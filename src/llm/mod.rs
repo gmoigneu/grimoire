@@ -26,11 +26,7 @@ pub trait LlmClient: Send + Sync {
 }
 
 /// Helper to create a client based on provider
-pub fn get_client(
-    provider: &str,
-    api_key: &str,
-    model: &str,
-) -> Option<Box<dyn LlmClient>> {
+pub fn get_client(provider: &str, api_key: &str, model: &str) -> Option<Box<dyn LlmClient>> {
     let api_key = api_key.trim();
     if api_key.is_empty() {
         return None;
@@ -57,8 +53,9 @@ pub fn complete_sync(
     model: &str,
     request: LlmRequest,
 ) -> Result<LlmResponse> {
-    let client = get_client(provider, api_key, model)
-        .ok_or_else(|| color_eyre::eyre::eyre!("No LLM API key configured. Go to Settings (s) to add one."))?;
+    let client = get_client(provider, api_key, model).ok_or_else(|| {
+        color_eyre::eyre::eyre!("No LLM API key configured. Go to Settings (s) to add one.")
+    })?;
 
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(client.complete(request))

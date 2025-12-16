@@ -111,7 +111,9 @@ impl<'a> ItemStore<'a> {
 
     /// Update an item, creating a version snapshot of the current state first
     pub fn update(&self, item: &Item) -> Result<()> {
-        let item_id = item.id.ok_or_else(|| color_eyre::eyre::eyre!("Item must have an id to update"))?;
+        let item_id = item
+            .id
+            .ok_or_else(|| color_eyre::eyre::eyre!("Item must have an id to update"))?;
 
         // Get current item to save as version
         if let Some(current) = self.get(item_id)? {
@@ -219,7 +221,9 @@ impl<'a> ItemStore<'a> {
     pub fn get_tags_with_counts(&self) -> Result<Vec<(String, usize)>> {
         // This is a simplified implementation - tags are comma-separated
         // A production version might use a separate tags table
-        let mut stmt = self.conn.prepare("SELECT tags FROM items WHERE tags IS NOT NULL")?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT tags FROM items WHERE tags IS NOT NULL")?;
 
         let mut tag_counts: std::collections::HashMap<String, usize> =
             std::collections::HashMap::new();
@@ -333,9 +337,7 @@ impl<'a> ItemStore<'a> {
                     permission_mode: row.get(9)?,
                     skills: row.get(10)?,
                     tags: row.get(11)?,
-                    created_at: created_str
-                        .as_ref()
-                        .and_then(|s| parse_sqlite_datetime(s)),
+                    created_at: created_str.as_ref().and_then(|s| parse_sqlite_datetime(s)),
                     updated_at: created_str.and_then(|s| parse_sqlite_datetime(&s)),
                     version,
                 })

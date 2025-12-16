@@ -8,16 +8,18 @@ use ratatui::{
     Frame,
 };
 
-const SELECTED_STYLE: Style = Style::new().bg(Color::DarkGray).add_modifier(Modifier::BOLD);
+const SELECTED_STYLE: Style = Style::new()
+    .bg(Color::DarkGray)
+    .add_modifier(Modifier::BOLD);
 const HEADER_STYLE: Style = Style::new().fg(Color::Yellow).add_modifier(Modifier::BOLD);
 
 pub fn draw(frame: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1),  // Title bar
-            Constraint::Min(0),     // Main content
-            Constraint::Length(1),  // Status bar
+            Constraint::Length(1), // Title bar
+            Constraint::Min(0),    // Main content
+            Constraint::Length(1), // Status bar
         ])
         .split(frame.area());
 
@@ -47,7 +49,11 @@ fn draw_main_content(frame: &mut Frame, area: Rect, app: &mut App) {
 
 fn draw_sidebar(frame: &mut Frame, area: Rect, app: &App) {
     let is_focused = app.focus == Focus::Sidebar;
-    let border_color = if is_focused { Color::Cyan } else { Color::DarkGray };
+    let border_color = if is_focused {
+        Color::Cyan
+    } else {
+        Color::DarkGray
+    };
 
     let block = Block::default()
         .borders(Borders::ALL)
@@ -71,7 +77,10 @@ fn draw_sidebar(frame: &mut Frame, area: Rect, app: &App) {
     } else {
         Style::default()
     };
-    lines.push(Line::styled(format!("{}Recent", recent_prefix), recent_style));
+    lines.push(Line::styled(
+        format!("{}Recent", recent_prefix),
+        recent_style,
+    ));
 
     // Categories section (indices 1-4)
     for (i, category) in Category::all().iter().enumerate() {
@@ -139,7 +148,11 @@ fn draw_sidebar(frame: &mut Frame, area: Rect, app: &App) {
 
 fn draw_item_list(frame: &mut Frame, area: Rect, app: &mut App) {
     let is_focused = app.focus == Focus::ItemList;
-    let border_color = if is_focused { Color::Cyan } else { Color::DarkGray };
+    let border_color = if is_focused {
+        Color::Cyan
+    } else {
+        Color::DarkGray
+    };
 
     let title = match (&app.selected_category, &app.selected_tag) {
         (Some(cat), _) => format!(" {} ", cat.display_name()),
@@ -181,7 +194,10 @@ fn draw_item_list(frame: &mut Frame, area: Rect, app: &mut App) {
             let is_selected = i == app.selected_item_index && is_focused;
 
             let (row_style, dim_style) = if is_selected {
-                (SELECTED_STYLE, Style::default().fg(Color::Gray).bg(Color::DarkGray))
+                (
+                    SELECTED_STYLE,
+                    Style::default().fg(Color::Gray).bg(Color::DarkGray),
+                )
             } else {
                 (Style::default(), Style::default().fg(Color::DarkGray))
             };
@@ -253,13 +269,15 @@ fn draw_status_bar(frame: &mut Frame, area: Rect, app: &App) {
         .flat_map(|(key, action)| {
             vec![
                 Span::styled(*key, Style::default().fg(Color::Yellow)),
-                Span::styled(format!("{}  ", action), Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    format!("{}  ", action),
+                    Style::default().fg(Color::DarkGray),
+                ),
             ]
         })
         .collect();
 
-    let status = Paragraph::new(Line::from(spans))
-        .style(Style::default().bg(Color::Black));
+    let status = Paragraph::new(Line::from(spans)).style(Style::default().bg(Color::Black));
 
     frame.render_widget(status, area);
 }

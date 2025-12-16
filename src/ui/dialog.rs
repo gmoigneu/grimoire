@@ -63,38 +63,42 @@ pub fn draw(frame: &mut Frame, dialog: &ConfirmDialog) {
         .split(inner);
 
     // Message
-    let message = Paragraph::new(dialog.message.as_str())
-        .style(Style::default().fg(Color::White));
+    let message = Paragraph::new(dialog.message.as_str()).style(Style::default().fg(Color::White));
     frame.render_widget(message, chunks[0]);
 
     // Buttons
     let button_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(50),
-            Constraint::Percentage(50),
-        ])
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(chunks[1]);
 
     let cancel_style = if !dialog.selected {
-        Style::default().bg(Color::DarkGray).fg(Color::White).add_modifier(Modifier::BOLD)
+        Style::default()
+            .bg(Color::DarkGray)
+            .fg(Color::White)
+            .add_modifier(Modifier::BOLD)
     } else {
         Style::default().fg(Color::DarkGray)
     };
 
     let confirm_style = if dialog.selected {
-        Style::default().bg(Color::Red).fg(Color::White).add_modifier(Modifier::BOLD)
+        Style::default()
+            .bg(Color::Red)
+            .fg(Color::White)
+            .add_modifier(Modifier::BOLD)
     } else {
         Style::default().fg(Color::Red)
     };
 
-    let cancel_btn = Paragraph::new(Line::from(vec![
-        Span::styled(format!(" [{}] ", dialog.cancel_label), cancel_style),
-    ]));
+    let cancel_btn = Paragraph::new(Line::from(vec![Span::styled(
+        format!(" [{}] ", dialog.cancel_label),
+        cancel_style,
+    )]));
 
-    let confirm_btn = Paragraph::new(Line::from(vec![
-        Span::styled(format!(" [{}] ", dialog.confirm_label), confirm_style),
-    ]));
+    let confirm_btn = Paragraph::new(Line::from(vec![Span::styled(
+        format!(" [{}] ", dialog.confirm_label),
+        confirm_style,
+    )]));
 
     frame.render_widget(cancel_btn, button_chunks[0]);
     frame.render_widget(confirm_btn, button_chunks[1]);

@@ -15,9 +15,7 @@ impl<'a> SettingsStore<'a> {
             .conn
             .prepare("SELECT value FROM settings WHERE key = ?")?;
 
-        let result = stmt
-            .query_row([key], |row| row.get(0))
-            .optional()?;
+        let result = stmt.query_row([key], |row| row.get(0)).optional()?;
 
         Ok(result)
     }
@@ -32,7 +30,8 @@ impl<'a> SettingsStore<'a> {
 
     #[allow(dead_code)]
     pub fn delete(&self, key: &str) -> Result<()> {
-        self.conn.execute("DELETE FROM settings WHERE key = ?", [key])?;
+        self.conn
+            .execute("DELETE FROM settings WHERE key = ?", [key])?;
         Ok(())
     }
 }

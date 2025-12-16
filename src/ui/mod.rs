@@ -1,21 +1,21 @@
-mod main_screen;
-mod view_screen;
+mod ai_popup;
+mod dialog;
 mod edit_screen;
+mod help_screen;
+mod history_popup;
+mod main_screen;
 mod search;
 mod settings_screen;
-mod help_screen;
-mod dialog;
-mod ai_popup;
-mod history_popup;
+mod view_screen;
 
-pub use view_screen::ViewState;
-pub use edit_screen::{EditState, EditField};
-pub use search::SearchState;
-pub use settings_screen::{SettingsState, SettingsField, LlmProvider};
-pub use help_screen::HelpState;
-pub use dialog::ConfirmDialog;
 pub use ai_popup::AiPopupState;
+pub use dialog::ConfirmDialog;
+pub use edit_screen::{EditField, EditState};
+pub use help_screen::HelpState;
 pub use history_popup::HistoryState;
+pub use search::SearchState;
+pub use settings_screen::{LlmProvider, SettingsField, SettingsState};
+pub use view_screen::ViewState;
 
 use crate::app::{App, Screen};
 use ratatui::Frame;

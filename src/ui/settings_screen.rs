@@ -192,7 +192,7 @@ impl SettingsState {
         } else if key.len() <= 8 {
             "*".repeat(key.len())
         } else {
-            format!("{}...{}", &key[..4], &key[key.len()-4..])
+            format!("{}...{}", &key[..4], &key[key.len() - 4..])
         }
     }
 }
@@ -201,15 +201,20 @@ pub fn draw(frame: &mut Frame, state: &SettingsState) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1),  // Title bar
-            Constraint::Min(0),     // Content
-            Constraint::Length(1),  // Status bar
+            Constraint::Length(1), // Title bar
+            Constraint::Min(0),    // Content
+            Constraint::Length(1), // Status bar
         ])
         .split(frame.area());
 
     // Title bar
     let title_bar = Paragraph::new(Line::from(vec![
-        Span::styled(" Settings ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " Settings ",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw("                                                        "),
         Span::styled("[ESC] Back", Style::default().fg(Color::DarkGray)),
     ]));
@@ -238,10 +243,10 @@ fn draw_content(frame: &mut Frame, area: Rect, state: &SettingsState) -> Rect {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(7),  // LLM section
-            Constraint::Length(4),  // Export section
-            Constraint::Length(4),  // Data section
-            Constraint::Min(0),     // Spacer
+            Constraint::Length(7), // LLM section
+            Constraint::Length(4), // Export section
+            Constraint::Length(4), // Data section
+            Constraint::Min(0),    // Spacer
         ])
         .split(inner);
 
@@ -249,9 +254,17 @@ fn draw_content(frame: &mut Frame, area: Rect, state: &SettingsState) -> Rect {
     draw_llm_section(frame, chunks[0], state);
 
     // Export section
-    draw_section(frame, chunks[1], " Export Settings ", &[
-        ("Path:     ", &state.export_path, state.focused_field == SettingsField::ExportPath, state.cursor_pos),
-    ]);
+    draw_section(
+        frame,
+        chunks[1],
+        " Export Settings ",
+        &[(
+            "Path:     ",
+            &state.export_path,
+            state.focused_field == SettingsField::ExportPath,
+            state.cursor_pos,
+        )],
+    );
 
     // Data section (read-only info)
     let data_block = Block::default()
@@ -262,12 +275,13 @@ fn draw_content(frame: &mut Frame, area: Rect, state: &SettingsState) -> Rect {
     let data_inner = data_block.inner(chunks[2]);
     frame.render_widget(data_block, chunks[2]);
 
-    let data_info = Paragraph::new(vec![
-        Line::from(vec![
-            Span::styled("Database: ", Style::default().fg(Color::Yellow)),
-            Span::styled("~/.local/share/grimoire/grimoire.db", Style::default().fg(Color::DarkGray)),
-        ]),
-    ]);
+    let data_info = Paragraph::new(vec![Line::from(vec![
+        Span::styled("Database: ", Style::default().fg(Color::Yellow)),
+        Span::styled(
+            "~/.local/share/grimoire/grimoire.db",
+            Style::default().fg(Color::DarkGray),
+        ),
+    ])]);
     frame.render_widget(data_info, data_inner);
 
     // Return the LLM section area for dropdown positioning
@@ -294,7 +308,10 @@ fn draw_llm_section(frame: &mut Frame, area: Rect, state: &SettingsState) {
     };
     lines.push(Line::from(vec![
         Span::styled("Provider: ", Style::default().fg(Color::Yellow)),
-        Span::styled(format!("[{}]", state.provider.display_name()), provider_style),
+        Span::styled(
+            format!("[{}]", state.provider.display_name()),
+            provider_style,
+        ),
         Span::styled(" ▼", Style::default().fg(Color::DarkGray)),
     ]));
 
@@ -311,7 +328,10 @@ fn draw_llm_section(frame: &mut Frame, area: Rect, state: &SettingsState) {
         lines.push(Line::from(vec![
             Span::styled("API Key:  ", Style::default().fg(Color::Yellow)),
             Span::raw(before),
-            Span::styled(cursor_char.to_string(), Style::default().bg(Color::White).fg(Color::Black)),
+            Span::styled(
+                cursor_char.to_string(),
+                Style::default().bg(Color::White).fg(Color::Black),
+            ),
             Span::raw(after),
         ]));
     } else {
@@ -334,7 +354,10 @@ fn draw_llm_section(frame: &mut Frame, area: Rect, state: &SettingsState) {
             lines.push(Line::from(vec![
                 Span::styled("Model:    ", Style::default().fg(Color::Yellow)),
                 Span::raw(before),
-                Span::styled(cursor_char.to_string(), Style::default().bg(Color::White).fg(Color::Black)),
+                Span::styled(
+                    cursor_char.to_string(),
+                    Style::default().bg(Color::White).fg(Color::Black),
+                ),
                 Span::raw(after),
             ]));
         } else {
@@ -380,7 +403,10 @@ fn draw_provider_dropdown(frame: &mut Frame, anchor: Rect, state: &SettingsState
         } else {
             Style::default()
         };
-        lines.push(Line::styled(format!(" {} ", provider.display_name()), style));
+        lines.push(Line::styled(
+            format!(" {} ", provider.display_name()),
+            style,
+        ));
     }
 
     let paragraph = Paragraph::new(lines);
@@ -410,14 +436,14 @@ fn draw_section(frame: &mut Frame, area: Rect, title: &str, fields: &[(&str, &st
             lines.push(Line::from(vec![
                 label_span,
                 Span::raw(before),
-                Span::styled(cursor_char.to_string(), Style::default().bg(Color::White).fg(Color::Black)),
+                Span::styled(
+                    cursor_char.to_string(),
+                    Style::default().bg(Color::White).fg(Color::Black),
+                ),
                 Span::raw(after),
             ]));
         } else {
-            lines.push(Line::from(vec![
-                label_span,
-                Span::raw(*value),
-            ]));
+            lines.push(Line::from(vec![label_span, Span::raw(*value)]));
         }
     }
 
@@ -441,18 +467,23 @@ fn draw_status_bar(frame: &mut Frame, area: Rect, state: &SettingsState) {
         .iter()
         .flat_map(|(key, action)| {
             if key.is_empty() {
-                vec![Span::styled(format!(" {}", action), Style::default().fg(Color::Red))]
+                vec![Span::styled(
+                    format!(" {}", action),
+                    Style::default().fg(Color::Red),
+                )]
             } else {
                 vec![
                     Span::styled(*key, Style::default().fg(Color::Yellow)),
-                    Span::styled(format!("{}  ", action), Style::default().fg(Color::DarkGray)),
+                    Span::styled(
+                        format!("{}  ", action),
+                        Style::default().fg(Color::DarkGray),
+                    ),
                 ]
             }
         })
         .collect();
 
-    let status = Paragraph::new(Line::from(spans))
-        .style(Style::default().bg(Color::Black));
+    let status = Paragraph::new(Line::from(spans)).style(Style::default().bg(Color::Black));
 
     frame.render_widget(status, area);
 }

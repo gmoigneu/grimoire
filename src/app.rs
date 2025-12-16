@@ -425,7 +425,11 @@ impl App {
                 } else if self.edit_state.focused_field == EditField::Content
                     || self.edit_state.focused_field == EditField::Description
                 {
-                    self.edit_state.insert_char(if key.code == KeyCode::Enter { '\n' } else { ' ' });
+                    self.edit_state.insert_char(if key.code == KeyCode::Enter {
+                        '\n'
+                    } else {
+                        ' '
+                    });
                 }
             }
             KeyCode::Char(c) => {
@@ -439,7 +443,10 @@ impl App {
             KeyCode::Right => self.edit_state.move_cursor_right(),
             KeyCode::Up => {
                 // For multiline fields, move cursor up; for others, go to previous field
-                if matches!(self.edit_state.focused_field, EditField::Content | EditField::Description) {
+                if matches!(
+                    self.edit_state.focused_field,
+                    EditField::Content | EditField::Description
+                ) {
                     self.edit_state.move_cursor_up();
                 } else {
                     self.edit_state.prev_field();
@@ -447,7 +454,10 @@ impl App {
             }
             KeyCode::Down => {
                 // For multiline fields, move cursor down; for others, go to next field
-                if matches!(self.edit_state.focused_field, EditField::Content | EditField::Description) {
+                if matches!(
+                    self.edit_state.focused_field,
+                    EditField::Content | EditField::Description
+                ) {
                     self.edit_state.move_cursor_down();
                 } else {
                     self.edit_state.next_field();
@@ -568,7 +578,11 @@ impl App {
     fn handle_dialog_key(&mut self, key: KeyEvent) -> Result<()> {
         if let Some(ref mut dialog) = self.confirm_dialog {
             match key.code {
-                KeyCode::Left | KeyCode::Right | KeyCode::Tab | KeyCode::Char('h') | KeyCode::Char('l') => {
+                KeyCode::Left
+                | KeyCode::Right
+                | KeyCode::Tab
+                | KeyCode::Char('h')
+                | KeyCode::Char('l') => {
                     dialog.toggle_selection();
                 }
                 KeyCode::Enter => {
@@ -645,11 +659,15 @@ impl App {
         let action = self.ai_popup_state.selected_action();
 
         let system_prompt = action.system_prompt().to_string();
-        let user_message = if self.ai_popup_state.is_custom() && !self.ai_popup_state.custom_input.is_empty() {
-            format!("Request: {}\n\nContent to process:\n{}", self.ai_popup_state.custom_input, content)
-        } else {
-            format!("Content to process:\n{}", content)
-        };
+        let user_message =
+            if self.ai_popup_state.is_custom() && !self.ai_popup_state.custom_input.is_empty() {
+                format!(
+                    "Request: {}\n\nContent to process:\n{}",
+                    self.ai_popup_state.custom_input, content
+                )
+            } else {
+                format!("Content to process:\n{}", content)
+            };
 
         self.ai_popup_state.is_loading = true;
         self.ai_popup_state.error = None;
@@ -671,8 +689,8 @@ impl App {
 
         // Spawn background thread
         std::thread::spawn(move || {
-            let result = complete_sync(&provider, &api_key, &llm_model, request)
-                .map_err(|e| e.to_string());
+            let result =
+                complete_sync(&provider, &api_key, &llm_model, request).map_err(|e| e.to_string());
             let _ = tx.send(result);
         });
 
@@ -777,7 +795,11 @@ impl App {
     }
 
     fn copy_selected(&mut self) -> Result<()> {
-        if let Some(content) = self.items.get(self.selected_item_index).map(|i| i.content.clone()) {
+        if let Some(content) = self
+            .items
+            .get(self.selected_item_index)
+            .map(|i| i.content.clone())
+        {
             self.copy_content(&content);
         }
         Ok(())
@@ -787,8 +809,8 @@ impl App {
         #[cfg(target_os = "linux")]
         {
             // Try wl-copy (Wayland) first, then xclip (X11)
-            use std::process::{Command, Stdio};
             use std::io::Write;
+            use std::process::{Command, Stdio};
 
             let result = Command::new("wl-copy")
                 .stdin(Stdio::piped())
@@ -826,12 +848,10 @@ impl App {
         #[cfg(not(target_os = "linux"))]
         {
             match arboard::Clipboard::new() {
-                Ok(mut clipboard) => {
-                    match clipboard.set_text(content) {
-                        Ok(_) => self.status_message = Some("Copied to clipboard".to_string()),
-                        Err(e) => self.status_message = Some(format!("Copy failed: {}", e)),
-                    }
-                }
+                Ok(mut clipboard) => match clipboard.set_text(content) {
+                    Ok(_) => self.status_message = Some("Copied to clipboard".to_string()),
+                    Err(e) => self.status_message = Some(format!("Copy failed: {}", e)),
+                },
                 Err(e) => {
                     self.status_message = Some(format!("Clipboard error: {}", e));
                 }
@@ -1023,7 +1043,9 @@ impl App {
                             let store = ItemStore::new(&self.db.conn);
                             if let Some(old_item) = store.get_version(item_id, version_num)? {
                                 // Update the item in the list temporarily for viewing
-                                if let Some(current_item) = self.items.get_mut(self.selected_item_index) {
+                                if let Some(current_item) =
+                                    self.items.get_mut(self.selected_item_index)
+                                {
                                     // Store max_version before overwriting
                                     let max_version = current_item.version;
                                     *current_item = old_item;

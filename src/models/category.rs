@@ -64,7 +64,13 @@ impl Category {
             Category::Prompt => &["description", "tags"],
             Category::Agent => &["model", "tools", "permission_mode", "skills", "tags"],
             Category::Skill => &["allowed_tools", "tags"],
-            Category::Command => &["description", "allowed_tools", "argument_hint", "model", "tags"],
+            Category::Command => &[
+                "description",
+                "allowed_tools",
+                "argument_hint",
+                "model",
+                "tags",
+            ],
         }
     }
 }

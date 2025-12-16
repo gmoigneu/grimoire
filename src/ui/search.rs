@@ -15,7 +15,6 @@ pub struct SearchState {
     pub selected_index: usize,
 }
 
-
 impl SearchState {
     pub fn insert_char(&mut self, c: char) {
         self.query.insert(self.cursor_pos, c);
@@ -61,7 +60,10 @@ impl SearchState {
 
     pub fn select_prev(&mut self) {
         if !self.results.is_empty() {
-            self.selected_index = self.selected_index.checked_sub(1).unwrap_or(self.results.len() - 1);
+            self.selected_index = self
+                .selected_index
+                .checked_sub(1)
+                .unwrap_or(self.results.len() - 1);
         }
     }
 
@@ -87,9 +89,9 @@ pub fn draw(frame: &mut Frame, state: &SearchState) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Search input
-            Constraint::Min(0),     // Results
-            Constraint::Length(1),  // Status bar
+            Constraint::Length(3), // Search input
+            Constraint::Min(0),    // Results
+            Constraint::Length(1), // Status bar
         ])
         .split(inner);
 
@@ -121,7 +123,10 @@ fn draw_search_input(frame: &mut Frame, area: Rect, state: &SearchState) {
     let line = Line::from(vec![
         Span::styled("/ ", Style::default().fg(Color::Yellow)),
         Span::raw(before),
-        Span::styled(cursor_char.to_string(), Style::default().bg(Color::White).fg(Color::Black)),
+        Span::styled(
+            cursor_char.to_string(),
+            Style::default().bg(Color::White).fg(Color::Black),
+        ),
         Span::raw(after),
     ]);
 
@@ -136,16 +141,27 @@ fn draw_results(frame: &mut Frame, area: Rect, state: &SearchState) {
         } else {
             "No results found"
         };
-        let paragraph = Paragraph::new(msg)
-            .style(Style::default().fg(Color::DarkGray));
+        let paragraph = Paragraph::new(msg).style(Style::default().fg(Color::DarkGray));
         frame.render_widget(paragraph, area);
         return;
     }
 
     let header = Row::new(vec![
-        Cell::from("NAME").style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-        Cell::from("CATEGORY").style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-        Cell::from("TAGS").style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+        Cell::from("NAME").style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Cell::from("CATEGORY").style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Cell::from("TAGS").style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ),
     ]);
 
     let rows: Vec<Row> = state
@@ -154,7 +170,9 @@ fn draw_results(frame: &mut Frame, area: Rect, state: &SearchState) {
         .enumerate()
         .map(|(i, item)| {
             let style = if i == state.selected_index {
-                Style::default().bg(Color::DarkGray).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .bg(Color::DarkGray)
+                    .add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
             };
@@ -186,17 +204,22 @@ fn draw_results(frame: &mut Frame, area: Rect, state: &SearchState) {
 }
 
 fn draw_status_bar(frame: &mut Frame, area: Rect) {
-    let shortcuts = [("j/k ", "navigate"),
+    let shortcuts = [
+        ("j/k ", "navigate"),
         ("Enter ", "select"),
         ("c ", "copy"),
-        ("ESC ", "close")];
+        ("ESC ", "close"),
+    ];
 
     let spans: Vec<Span> = shortcuts
         .iter()
         .flat_map(|(key, action)| {
             vec![
                 Span::styled(*key, Style::default().fg(Color::Yellow)),
-                Span::styled(format!("{}  ", action), Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    format!("{}  ", action),
+                    Style::default().fg(Color::DarkGray),
+                ),
             ]
         })
         .collect();

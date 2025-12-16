@@ -96,7 +96,12 @@ impl Item {
         // Category-specific validation
         match self.category {
             Category::Agent | Category::Skill => {
-                if self.description.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true) {
+                if self
+                    .description
+                    .as_ref()
+                    .map(|s| s.trim().is_empty())
+                    .unwrap_or(true)
+                {
                     errors.push("Description is required for this category".to_string());
                 }
             }

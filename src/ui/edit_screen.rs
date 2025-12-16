@@ -127,7 +127,10 @@ impl EditState {
             EditField::Category => self.item.category.as_str(),
             EditField::Tags => self.item.tags.as_deref().unwrap_or(""),
             EditField::Model => self.item.model.as_deref().unwrap_or(""),
-            EditField::Tools => self.item.tools.as_deref()
+            EditField::Tools => self
+                .item
+                .tools
+                .as_deref()
                 .or(self.item.allowed_tools.as_deref())
                 .unwrap_or(""),
             EditField::Description => self.item.description.as_deref().unwrap_or(""),
@@ -150,7 +153,9 @@ impl EditState {
                     _ => {}
                 }
             }
-            EditField::Description => self.item.description = if value.is_empty() { None } else { Some(value) },
+            EditField::Description => {
+                self.item.description = if value.is_empty() { None } else { Some(value) }
+            }
             EditField::Content => self.item.content = value,
         }
     }
@@ -170,9 +175,14 @@ impl EditState {
 
     pub fn insert_str(&mut self, s: &str) {
         // For multiline fields (Content, Description), keep newlines; for others, filter them
-        let is_multiline = matches!(self.focused_field, EditField::Content | EditField::Description);
+        let is_multiline = matches!(
+            self.focused_field,
+            EditField::Content | EditField::Description
+        );
         let clean: String = if is_multiline {
-            s.chars().filter(|c| *c == '\n' || !c.is_control()).collect()
+            s.chars()
+                .filter(|c| *c == '\n' || !c.is_control())
+                .collect()
         } else {
             s.chars().filter(|c| !c.is_control()).collect()
         };
@@ -333,11 +343,11 @@ pub fn draw(frame: &mut Frame, state: &EditState) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1),  // Title bar
-            Constraint::Length(7),  // Form fields (top section)
-            Constraint::Length(6),  // Description
-            Constraint::Min(0),     // Content
-            Constraint::Length(1),  // Status bar
+            Constraint::Length(1), // Title bar
+            Constraint::Length(7), // Form fields (top section)
+            Constraint::Length(6), // Description
+            Constraint::Min(0),    // Content
+            Constraint::Length(1), // Status bar
         ])
         .split(frame.area());
 
@@ -345,10 +355,19 @@ pub fn draw(frame: &mut Frame, state: &EditState) {
     let title = if state.is_new {
         format!(" New {} ", state.item.category.display_name())
     } else {
-        format!(" Edit {}: {} ", state.item.category.display_name(), state.item.name)
+        format!(
+            " Edit {}: {} ",
+            state.item.category.display_name(),
+            state.item.name
+        )
     };
     let title_bar = Paragraph::new(Line::from(vec![
-        Span::styled(title, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            title,
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw("                                                        "),
         Span::styled("[ESC] Cancel", Style::default().fg(Color::DarkGray)),
     ]));
@@ -392,36 +411,73 @@ fn draw_form_fields(frame: &mut Frame, area: Rect, state: &EditState) -> Rect {
         .split(inner);
 
     // Name field
-    draw_field(frame, field_chunks[0], "Name:     ", &state.item.name,
-               state.focused_field == EditField::Name, state.cursor_pos);
+    draw_field(
+        frame,
+        field_chunks[0],
+        "Name:     ",
+        &state.item.name,
+        state.focused_field == EditField::Name,
+        state.cursor_pos,
+    );
 
     // Category field (with dropdown indicator)
     let cat_display = format!("[{}] ▼", state.item.category.display_name());
-    draw_field(frame, field_chunks[1], "Category: ", &cat_display,
-               state.focused_field == EditField::Category, 0);
+    draw_field(
+        frame,
+        field_chunks[1],
+        "Category: ",
+        &cat_display,
+        state.focused_field == EditField::Category,
+        0,
+    );
 
     // Tags field
-    draw_field(frame, field_chunks[2], "Tags:     ",
-               state.item.tags.as_deref().unwrap_or(""),
-               state.focused_field == EditField::Tags, state.cursor_pos);
+    draw_field(
+        frame,
+        field_chunks[2],
+        "Tags:     ",
+        state.item.tags.as_deref().unwrap_or(""),
+        state.focused_field == EditField::Tags,
+        state.cursor_pos,
+    );
 
     // Category-specific fields
     match state.item.category {
         Category::Agent | Category::Command => {
-            draw_field(frame, field_chunks[3], "Model:    ",
-                       state.item.model.as_deref().unwrap_or(""),
-                       state.focused_field == EditField::Model, state.cursor_pos);
+            draw_field(
+                frame,
+                field_chunks[3],
+                "Model:    ",
+                state.item.model.as_deref().unwrap_or(""),
+                state.focused_field == EditField::Model,
+                state.cursor_pos,
+            );
 
-            let tools = state.item.tools.as_deref()
+            let tools = state
+                .item
+                .tools
+                .as_deref()
                 .or(state.item.allowed_tools.as_deref())
                 .unwrap_or("");
-            draw_field(frame, field_chunks[4], "Tools:    ", tools,
-                       state.focused_field == EditField::Tools, state.cursor_pos);
+            draw_field(
+                frame,
+                field_chunks[4],
+                "Tools:    ",
+                tools,
+                state.focused_field == EditField::Tools,
+                state.cursor_pos,
+            );
         }
         Category::Skill => {
             let tools = state.item.allowed_tools.as_deref().unwrap_or("");
-            draw_field(frame, field_chunks[3], "Tools:    ", tools,
-                       state.focused_field == EditField::Tools, state.cursor_pos);
+            draw_field(
+                frame,
+                field_chunks[3],
+                "Tools:    ",
+                tools,
+                state.focused_field == EditField::Tools,
+                state.cursor_pos,
+            );
         }
         Category::Prompt => {}
     }
@@ -430,7 +486,14 @@ fn draw_form_fields(frame: &mut Frame, area: Rect, state: &EditState) -> Rect {
     field_chunks[1]
 }
 
-fn draw_field(frame: &mut Frame, area: Rect, label: &str, value: &str, focused: bool, cursor: usize) {
+fn draw_field(
+    frame: &mut Frame,
+    area: Rect,
+    label: &str,
+    value: &str,
+    focused: bool,
+    cursor: usize,
+) {
     let style = if focused {
         Style::default().fg(Color::Cyan)
     } else {
@@ -449,14 +512,14 @@ fn draw_field(frame: &mut Frame, area: Rect, label: &str, value: &str, focused: 
         vec![
             label_span,
             Span::raw(before),
-            Span::styled(cursor_char.to_string(), Style::default().bg(Color::White).fg(Color::Black)),
+            Span::styled(
+                cursor_char.to_string(),
+                Style::default().bg(Color::White).fg(Color::Black),
+            ),
             Span::raw(after),
         ]
     } else {
-        vec![
-            label_span,
-            Span::styled(value, style),
-        ]
+        vec![label_span, Span::styled(value, style)]
     };
 
     let line = Line::from(value_display);
@@ -466,7 +529,11 @@ fn draw_field(frame: &mut Frame, area: Rect, label: &str, value: &str, focused: 
 
 fn draw_description_field(frame: &mut Frame, area: Rect, state: &EditState) {
     let focused = state.focused_field == EditField::Description;
-    let border_color = if focused { Color::Cyan } else { Color::DarkGray };
+    let border_color = if focused {
+        Color::Cyan
+    } else {
+        Color::DarkGray
+    };
 
     let required = match state.item.category {
         Category::Agent | Category::Skill => " (required)",
@@ -495,7 +562,11 @@ fn draw_description_field(frame: &mut Frame, area: Rect, state: &EditState) {
 
 fn draw_content_field(frame: &mut Frame, area: Rect, state: &EditState) {
     let focused = state.focused_field == EditField::Content;
-    let border_color = if focused { Color::Cyan } else { Color::DarkGray };
+    let border_color = if focused {
+        Color::Cyan
+    } else {
+        Color::DarkGray
+    };
 
     let block = Block::default()
         .title(" Content (required) ")
@@ -514,7 +585,12 @@ fn draw_content_field(frame: &mut Frame, area: Rect, state: &EditState) {
         Paragraph::new(content.as_str())
     };
 
-    frame.render_widget(paragraph.wrap(Wrap { trim: false }).scroll((state.content_scroll, 0)), inner);
+    frame.render_widget(
+        paragraph
+            .wrap(Wrap { trim: false })
+            .scroll((state.content_scroll, 0)),
+        inner,
+    );
 }
 
 /// Render text with a cursor at the given position, preserving newlines naturally
@@ -608,26 +684,27 @@ fn draw_status_bar(frame: &mut Frame, area: Rect, state: &EditState) {
             .flat_map(|(key, action)| {
                 vec![
                     Span::styled(*key, Style::default().fg(Color::Yellow)),
-                    Span::styled(format!("{}  ", action), Style::default().fg(Color::DarkGray)),
+                    Span::styled(
+                        format!("{}  ", action),
+                        Style::default().fg(Color::DarkGray),
+                    ),
                 ]
             })
             .collect();
 
-        let status = Paragraph::new(Line::from(spans))
-            .style(Style::default().bg(Color::Black));
+        let status = Paragraph::new(Line::from(spans)).style(Style::default().bg(Color::Black));
 
         frame.render_widget(status, area);
         return;
     }
 
-    let mut shortcuts = vec![
-        ("Tab ", "next"),
-        ("S-Tab ", "prev"),
-    ];
+    let mut shortcuts = vec![("Tab ", "next"), ("S-Tab ", "prev")];
 
     if state.focused_field == EditField::Category {
         shortcuts.push(("Enter ", "select category"));
-    } else if state.focused_field == EditField::Content || state.focused_field == EditField::Description {
+    } else if state.focused_field == EditField::Content
+        || state.focused_field == EditField::Description
+    {
         shortcuts.push(("C-a ", "ai-assist"));
     }
 
@@ -642,18 +719,23 @@ fn draw_status_bar(frame: &mut Frame, area: Rect, state: &EditState) {
         .iter()
         .flat_map(|(key, action)| {
             if key.is_empty() {
-                vec![Span::styled(format!(" {}", action), Style::default().fg(Color::Red))]
+                vec![Span::styled(
+                    format!(" {}", action),
+                    Style::default().fg(Color::Red),
+                )]
             } else {
                 vec![
                     Span::styled(*key, Style::default().fg(Color::Yellow)),
-                    Span::styled(format!("{}  ", action), Style::default().fg(Color::DarkGray)),
+                    Span::styled(
+                        format!("{}  ", action),
+                        Style::default().fg(Color::DarkGray),
+                    ),
                 ]
             }
         })
         .collect();
 
-    let status = Paragraph::new(Line::from(spans))
-        .style(Style::default().bg(Color::Black));
+    let status = Paragraph::new(Line::from(spans)).style(Style::default().bg(Color::Black));
 
     frame.render_widget(status, area);
 }
@@ -684,12 +766,17 @@ fn draw_category_dropdown(frame: &mut Frame, anchor: Rect, state: &EditState) {
         let prefix = if is_selected { "> " } else { "  " };
 
         let style = if is_selected {
-            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::default()
         };
 
-        lines.push(Line::styled(format!("{}{}", prefix, category.display_name()), style));
+        lines.push(Line::styled(
+            format!("{}{}", prefix, category.display_name()),
+            style,
+        ));
     }
 
     let paragraph = Paragraph::new(lines);

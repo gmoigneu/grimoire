@@ -1,0 +1,12 @@
+#!/bin/sh
+
+echo "Running cargo fmt check..."
+
+cargo fmt --all -- --check
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "Formatting check failed. Run 'cargo fmt' to fix."
+    exit 1
+fi
+
+echo "Format check passed."
