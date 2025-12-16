@@ -1,4 +1,4 @@
-# GRIMOIRE
+# G.R.I.M.O.I.R.E.
 
 **G**lobal **R**epository and **I**ndex for **M**odel **O**perations, **I**nstructions and **R**esponse **E**ngineering
 
