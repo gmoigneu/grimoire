@@ -68,7 +68,7 @@ impl LlmClient for AnthropicClient {
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
-            return Err(eyre!("Anthropic API error {}: {}", status, error_text));
+            return Err(eyre!("Anthropic API error {} (model: {}): {}", status, self.model, error_text));
         }
 
         let api_response: AnthropicResponse = response.json().await?;

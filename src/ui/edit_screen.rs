@@ -168,6 +168,29 @@ impl EditState {
         self.set_current_field(chars.into_iter().collect());
     }
 
+    pub fn insert_str(&mut self, s: &str) {
+        // For multiline fields (Content, Description), keep newlines; for others, filter them
+        let is_multiline = matches!(self.focused_field, EditField::Content | EditField::Description);
+        let clean: String = if is_multiline {
+            s.chars().filter(|c| *c == '\n' || !c.is_control()).collect()
+        } else {
+            s.chars().filter(|c| !c.is_control()).collect()
+        };
+
+        let field_value = self.current_field_value().to_string();
+        let mut chars: Vec<char> = field_value.chars().collect();
+
+        if self.cursor_pos > chars.len() {
+            self.cursor_pos = chars.len();
+        }
+
+        for (i, c) in clean.chars().enumerate() {
+            chars.insert(self.cursor_pos + i, c);
+        }
+        self.cursor_pos += clean.chars().count();
+        self.set_current_field(chars.into_iter().collect());
+    }
+
     pub fn delete_char(&mut self) {
         let field_value = self.current_field_value().to_string();
         let mut chars: Vec<char> = field_value.chars().collect();
@@ -204,6 +227,95 @@ impl EditState {
 
     pub fn move_cursor_end(&mut self) {
         self.cursor_pos = self.current_field_value().chars().count();
+    }
+
+    pub fn move_cursor_up(&mut self) {
+        let content = self.current_field_value();
+        let chars: Vec<char> = content.chars().collect();
+        let cursor = self.cursor_pos.min(chars.len());
+
+        // Find the start of the current line and the column position
+        let mut line_start = 0;
+        for (i, ch) in chars.iter().enumerate() {
+            if i >= cursor {
+                break;
+            }
+            if *ch == '\n' {
+                line_start = i + 1;
+            }
+        }
+        let column = cursor - line_start;
+
+        // If we're on the first line, go to start
+        if line_start == 0 {
+            self.cursor_pos = 0;
+            return;
+        }
+
+        // Find the start of the previous line
+        let mut prev_line_start = 0;
+        for (i, ch) in chars.iter().enumerate() {
+            if i >= line_start - 1 {
+                break;
+            }
+            if *ch == '\n' {
+                prev_line_start = i + 1;
+            }
+        }
+
+        // Calculate the length of the previous line
+        let prev_line_len = line_start - 1 - prev_line_start;
+
+        // Move to the same column on the previous line, or end of line if shorter
+        self.cursor_pos = prev_line_start + column.min(prev_line_len);
+    }
+
+    pub fn move_cursor_down(&mut self) {
+        let content = self.current_field_value();
+        let chars: Vec<char> = content.chars().collect();
+        let cursor = self.cursor_pos.min(chars.len());
+
+        // Find the start of the current line and the column position
+        let mut line_start = 0;
+        for (i, ch) in chars.iter().enumerate() {
+            if i >= cursor {
+                break;
+            }
+            if *ch == '\n' {
+                line_start = i + 1;
+            }
+        }
+        let column = cursor - line_start;
+
+        // Find the start of the next line
+        let mut next_line_start = None;
+        for (i, ch) in chars.iter().enumerate() {
+            if i >= cursor && *ch == '\n' {
+                next_line_start = Some(i + 1);
+                break;
+            }
+        }
+
+        // If there's no next line, go to end
+        let Some(next_start) = next_line_start else {
+            self.cursor_pos = chars.len();
+            return;
+        };
+
+        // Find the end of the next line
+        let mut next_line_end = chars.len();
+        for (i, ch) in chars.iter().enumerate() {
+            if i >= next_start && *ch == '\n' {
+                next_line_end = i;
+                break;
+            }
+        }
+
+        // Calculate the length of the next line
+        let next_line_len = next_line_end - next_start;
+
+        // Move to the same column on the next line, or end of line if shorter
+        self.cursor_pos = next_start + column.min(next_line_len);
     }
 
     pub fn next_field(&mut self) {
@@ -371,18 +483,9 @@ fn draw_description_field(frame: &mut Frame, area: Rect, state: &EditState) {
 
     let desc = state.item.description.as_deref().unwrap_or("");
     let paragraph = if focused {
-        // Show with cursor
-        let chars: Vec<char> = desc.chars().collect();
-        let cursor = state.cursor_pos.min(chars.len());
-        let before: String = chars.iter().take(cursor).collect();
-        let cursor_char = chars.get(cursor).copied().unwrap_or(' ');
-        let after: String = chars.iter().skip(cursor + 1).collect();
-
-        Paragraph::new(Line::from(vec![
-            Span::raw(before),
-            Span::styled(cursor_char.to_string(), Style::default().bg(Color::White).fg(Color::Black)),
-            Span::raw(after),
-        ]))
+        // Show with cursor while preserving line breaks
+        let lines = render_multiline_with_cursor(desc, state.cursor_pos);
+        Paragraph::new(lines)
     } else {
         Paragraph::new(desc)
     };
@@ -404,23 +507,78 @@ fn draw_content_field(frame: &mut Frame, area: Rect, state: &EditState) {
 
     let content = &state.item.content;
     let paragraph = if focused {
-        // Show with cursor
-        let chars: Vec<char> = content.chars().collect();
-        let cursor = state.cursor_pos.min(chars.len());
-        let before: String = chars.iter().take(cursor).collect();
-        let cursor_char = chars.get(cursor).copied().unwrap_or(' ');
-        let after: String = chars.iter().skip(cursor + 1).collect();
-
-        Paragraph::new(Line::from(vec![
-            Span::raw(before),
-            Span::styled(cursor_char.to_string(), Style::default().bg(Color::White).fg(Color::Black)),
-            Span::raw(after),
-        ]))
+        // Show with cursor while preserving line breaks
+        let lines = render_multiline_with_cursor(content, state.cursor_pos);
+        Paragraph::new(lines)
     } else {
         Paragraph::new(content.as_str())
     };
 
     frame.render_widget(paragraph.wrap(Wrap { trim: false }).scroll((state.content_scroll, 0)), inner);
+}
+
+/// Render multiline text with a cursor at the given position
+fn render_multiline_with_cursor(content: &str, cursor_pos: usize) -> Vec<Line<'static>> {
+    // Split content into lines, preserving empty lines
+    let text_lines: Vec<&str> = content.split('\n').collect();
+    let mut result: Vec<Line<'static>> = Vec::new();
+
+    // Find which line and column the cursor is on
+    let mut char_count = 0;
+    let mut cursor_line = 0;
+    let mut cursor_col = 0;
+
+    for (line_idx, line) in text_lines.iter().enumerate() {
+        let line_start = char_count;
+        let line_end = char_count + line.chars().count();
+
+        if cursor_pos >= line_start && cursor_pos <= line_end {
+            cursor_line = line_idx;
+            cursor_col = cursor_pos - line_start;
+            break;
+        }
+
+        // +1 for the newline character (except for last line)
+        char_count = line_end + 1;
+        cursor_line = line_idx + 1;
+        cursor_col = 0;
+    }
+
+    // Render each line
+    for (line_idx, line_text) in text_lines.iter().enumerate() {
+        if line_idx == cursor_line {
+            // This line has the cursor
+            let chars: Vec<char> = line_text.chars().collect();
+            let col = cursor_col.min(chars.len());
+
+            let before: String = chars.iter().take(col).collect();
+            let cursor_char = chars.get(col).copied().unwrap_or(' ');
+            let after: String = chars.iter().skip(col + 1).collect();
+
+            let line = Line::from(vec![
+                Span::raw(before),
+                Span::styled(
+                    cursor_char.to_string(),
+                    Style::default().bg(Color::White).fg(Color::Black),
+                ),
+                Span::raw(after),
+            ]);
+            result.push(line);
+        } else {
+            // No cursor on this line
+            result.push(Line::raw(line_text.to_string()));
+        }
+    }
+
+    // Ensure at least one line
+    if result.is_empty() {
+        result.push(Line::from(Span::styled(
+            " ".to_string(),
+            Style::default().bg(Color::White).fg(Color::Black),
+        )));
+    }
+
+    result
 }
 
 fn draw_status_bar(frame: &mut Frame, area: Rect, state: &EditState) {

@@ -1,13 +1,15 @@
 use crate::db::{Database, ItemStore, SettingsStore};
 use crate::export::ClaudeExporter;
-use crate::llm::{complete_sync, LlmRequest};
+use crate::llm::{complete_sync, LlmRequest, LlmResponse};
 use crate::models::{Category, Item};
 use crate::ui::{
-    AiPopupState, ConfirmDialog, EditField, EditState, HelpState, SearchState, SettingsState, ViewState,
+    AiPopupState, ConfirmDialog, EditField, EditState, HelpState, LlmProvider, SearchState,
+    SettingsField, SettingsState, ViewState,
 };
 use color_eyre::eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::DefaultTerminal;
+use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,6 +62,9 @@ pub struct App {
     pub show_ai_popup: bool,
     pub ai_popup_state: AiPopupState,
 
+    // Background task receiver for LLM responses
+    pub llm_receiver: Option<Receiver<Result<LlmResponse, String>>>,
+
     // Message to display
     pub status_message: Option<String>,
 }
@@ -72,17 +77,17 @@ impl App {
         let settings_store = SettingsStore::new(&db.conn);
         let mut settings_state = SettingsState::default();
 
-        if let Ok(Some(key)) = settings_store.get("anthropic_key") {
-            settings_state.anthropic_key = key;
+        if let Ok(Some(provider)) = settings_store.get("llm_provider") {
+            settings_state.provider = LlmProvider::from_str(&provider);
         }
-        if let Ok(Some(model)) = settings_store.get("anthropic_model") {
-            settings_state.anthropic_model = model;
+        if let Ok(Some(key)) = settings_store.get("api_key") {
+            settings_state.api_key = key.trim().to_string();
         }
-        if let Ok(Some(key)) = settings_store.get("openai_key") {
-            settings_state.openai_key = key;
+        if let Ok(Some(model)) = settings_store.get("llm_model") {
+            settings_state.llm_model = model.trim().to_string();
         }
         if let Ok(Some(path)) = settings_store.get("export_path") {
-            settings_state.export_path = path;
+            settings_state.export_path = path.trim().to_string();
         }
 
         let mut app = Self {
@@ -106,6 +111,7 @@ impl App {
             confirm_dialog: None,
             show_ai_popup: false,
             ai_popup_state: AiPopupState::default(),
+            llm_receiver: None,
             status_message: None,
         };
 
@@ -136,13 +142,74 @@ impl App {
         while !self.should_quit {
             terminal.draw(|frame| crate::ui::draw(frame, &mut self))?;
 
+            // Check for LLM response from background task
+            self.poll_llm_response();
+
+            // Tick loading spinner animation
+            self.ai_popup_state.tick_loading();
+
+            // Process all pending events before redrawing
             if event::poll(Duration::from_millis(100))? {
-                if let Event::Key(key) = event::read()? {
-                    self.handle_key(key)?;
+                loop {
+                    match event::read()? {
+                        Event::Key(key) => {
+                            self.handle_key(key)?;
+                        }
+                        Event::Paste(text) => {
+                            self.handle_paste(&text)?;
+                        }
+                        _ => {}
+                    }
+                    // Check if more events are immediately available
+                    if !event::poll(Duration::from_millis(0))? {
+                        break;
+                    }
                 }
             }
         }
 
+        Ok(())
+    }
+
+    fn poll_llm_response(&mut self) {
+        if let Some(ref receiver) = self.llm_receiver {
+            match receiver.try_recv() {
+                Ok(Ok(response)) => {
+                    self.ai_popup_state.result = Some(response.content);
+                    self.ai_popup_state.is_loading = false;
+                    self.llm_receiver = None;
+                }
+                Ok(Err(error)) => {
+                    self.ai_popup_state.error = Some(error);
+                    self.ai_popup_state.is_loading = false;
+                    self.llm_receiver = None;
+                }
+                Err(mpsc::TryRecvError::Empty) => {
+                    // Still waiting, continue
+                }
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    self.ai_popup_state.error = Some("LLM task failed unexpectedly".to_string());
+                    self.ai_popup_state.is_loading = false;
+                    self.llm_receiver = None;
+                }
+            }
+        }
+    }
+
+    fn handle_paste(&mut self, text: &str) -> Result<()> {
+        // Handle pasted text based on current screen
+        match self.screen {
+            Screen::Settings => {
+                self.settings_state.insert_str(text);
+            }
+            Screen::Edit => {
+                self.edit_state.insert_str(text);
+            }
+            Screen::Search => {
+                self.search_state.insert_str(text);
+            }
+            _ => {}
+        }
         Ok(())
     }
 
@@ -282,7 +349,13 @@ impl App {
             KeyCode::Char('d') => self.pending_key = Some('d'),
             KeyCode::Char('x') => self.export_selected()?,
             KeyCode::Char('a') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.show_ai_popup = true;
+                // Load current item into edit_state for AI to work with
+                if let Some(item) = self.selected_item().cloned() {
+                    self.edit_state = EditState::edit_item(item);
+                    // Set focus to Content since AI popup works on content
+                    self.edit_state.focused_field = EditField::Content;
+                    self.show_ai_popup = true;
+                }
             }
             _ => {}
         }
@@ -349,6 +422,22 @@ impl App {
             KeyCode::Delete => self.edit_state.delete_char_forward(),
             KeyCode::Left => self.edit_state.move_cursor_left(),
             KeyCode::Right => self.edit_state.move_cursor_right(),
+            KeyCode::Up => {
+                // For multiline fields, move cursor up; for others, go to previous field
+                if matches!(self.edit_state.focused_field, EditField::Content | EditField::Description) {
+                    self.edit_state.move_cursor_up();
+                } else {
+                    self.edit_state.prev_field();
+                }
+            }
+            KeyCode::Down => {
+                // For multiline fields, move cursor down; for others, go to next field
+                if matches!(self.edit_state.focused_field, EditField::Content | EditField::Description) {
+                    self.edit_state.move_cursor_down();
+                } else {
+                    self.edit_state.next_field();
+                }
+            }
             KeyCode::Home => self.edit_state.move_cursor_start(),
             KeyCode::End => self.edit_state.move_cursor_end(),
             _ => {}
@@ -375,7 +464,7 @@ impl App {
             KeyCode::Char('j') | KeyCode::Down => self.search_state.select_next(),
             KeyCode::Char('k') | KeyCode::Up => self.search_state.select_prev(),
             KeyCode::Char('c') => {
-                if let Some(item) = self.search_state.selected_item() {
+                if let Some(item) = self.search_state.selected_item().cloned() {
                     self.copy_content(&item.content);
                 }
             }
@@ -395,6 +484,26 @@ impl App {
     }
 
     fn handle_settings_key(&mut self, key: KeyEvent) -> Result<()> {
+        // Handle provider dropdown if open
+        if self.settings_state.show_provider_dropdown {
+            match key.code {
+                KeyCode::Esc => {
+                    self.settings_state.show_provider_dropdown = false;
+                }
+                KeyCode::Enter | KeyCode::Char(' ') => {
+                    self.settings_state.select_provider_from_dropdown();
+                }
+                KeyCode::Char('j') | KeyCode::Down => {
+                    self.settings_state.dropdown_next();
+                }
+                KeyCode::Char('k') | KeyCode::Up => {
+                    self.settings_state.dropdown_prev();
+                }
+                _ => {}
+            }
+            return Ok(());
+        }
+
         match key.code {
             KeyCode::Esc | KeyCode::Char('q') => {
                 if self.settings_state.has_changes {
@@ -408,8 +517,24 @@ impl App {
             KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.save_settings()?;
             }
+            KeyCode::Enter | KeyCode::Char(' ') => {
+                if self.settings_state.focused_field == SettingsField::Provider {
+                    self.settings_state.open_provider_dropdown();
+                }
+            }
             KeyCode::Char(c) => self.settings_state.insert_char(c),
             KeyCode::Backspace => self.settings_state.delete_char(),
+            KeyCode::Left => {
+                if self.settings_state.cursor_pos > 0 {
+                    self.settings_state.cursor_pos -= 1;
+                }
+            }
+            KeyCode::Right => {
+                let len = self.settings_state.current_field_value().chars().count();
+                if self.settings_state.cursor_pos < len {
+                    self.settings_state.cursor_pos += 1;
+                }
+            }
             _ => {}
         }
         Ok(())
@@ -470,15 +595,20 @@ impl App {
                 if self.ai_popup_state.result.is_some() {
                     // Apply the result
                     if let Some(result) = self.ai_popup_state.result.take() {
-                        if self.edit_state.focused_field == EditField::Content {
-                            self.edit_state.item.content = result;
-                        } else if self.edit_state.focused_field == EditField::Description {
+                        // AI popup is primarily for content improvement
+                        // Only apply to description if explicitly focused there
+                        if self.edit_state.focused_field == EditField::Description {
                             self.edit_state.item.description = Some(result);
+                        } else {
+                            // Default to updating content
+                            self.edit_state.item.content = result;
                         }
                         self.edit_state.has_changes = true;
                     }
                     self.show_ai_popup = false;
                     self.ai_popup_state.clear();
+                    // After applying AI result, transition to Edit screen to review
+                    self.screen = Screen::Edit;
                 } else {
                     // Run AI completion
                     self.run_ai_completion()?;
@@ -496,7 +626,7 @@ impl App {
     }
 
     fn run_ai_completion(&mut self) -> Result<()> {
-        let content = &self.edit_state.item.content;
+        let content = self.edit_state.item.content.clone();
         let action = self.ai_popup_state.selected_action();
 
         let system_prompt = action.system_prompt().to_string();
@@ -515,21 +645,21 @@ impl App {
             max_tokens: 4096,
         };
 
-        match complete_sync(
-            Some(&self.settings_state.anthropic_key),
-            Some(&self.settings_state.anthropic_model),
-            Some(&self.settings_state.openai_key),
-            request,
-        ) {
-            Ok(response) => {
-                self.ai_popup_state.result = Some(response.content);
-                self.ai_popup_state.is_loading = false;
-            }
-            Err(e) => {
-                self.ai_popup_state.error = Some(e.to_string());
-                self.ai_popup_state.is_loading = false;
-            }
-        }
+        // Clone settings for the background thread
+        let provider = self.settings_state.provider.display_name().to_string();
+        let api_key = self.settings_state.api_key.clone();
+        let llm_model = self.settings_state.llm_model.clone();
+
+        // Create channel for response
+        let (tx, rx) = mpsc::channel();
+        self.llm_receiver = Some(rx);
+
+        // Spawn background thread
+        std::thread::spawn(move || {
+            let result = complete_sync(&provider, &api_key, &llm_model, request)
+                .map_err(|e| e.to_string());
+            let _ = tx.send(result);
+        });
 
         Ok(())
     }
@@ -630,15 +760,65 @@ impl App {
     }
 
     fn copy_selected(&mut self) -> Result<()> {
-        if let Some(item) = self.items.get(self.selected_item_index) {
-            self.copy_content(&item.content);
+        if let Some(content) = self.items.get(self.selected_item_index).map(|i| i.content.clone()) {
+            self.copy_content(&content);
         }
         Ok(())
     }
 
-    fn copy_content(&self, content: &str) {
-        if let Ok(mut clipboard) = arboard::Clipboard::new() {
-            let _ = clipboard.set_text(content);
+    fn copy_content(&mut self, content: &str) {
+        #[cfg(target_os = "linux")]
+        {
+            // Try wl-copy (Wayland) first, then xclip (X11)
+            use std::process::{Command, Stdio};
+            use std::io::Write;
+
+            let result = Command::new("wl-copy")
+                .stdin(Stdio::piped())
+                .spawn()
+                .and_then(|mut child| {
+                    if let Some(stdin) = child.stdin.as_mut() {
+                        stdin.write_all(content.as_bytes())?;
+                    }
+                    child.wait()
+                })
+                .or_else(|_| {
+                    // Fallback to xclip
+                    Command::new("xclip")
+                        .args(["-selection", "clipboard"])
+                        .stdin(Stdio::piped())
+                        .spawn()
+                        .and_then(|mut child| {
+                            if let Some(stdin) = child.stdin.as_mut() {
+                                stdin.write_all(content.as_bytes())?;
+                            }
+                            child.wait()
+                        })
+                });
+
+            match result {
+                Ok(status) if status.success() => {
+                    self.status_message = Some("Copied to clipboard".to_string());
+                }
+                _ => {
+                    self.status_message = Some("Copy failed: install wl-copy or xclip".to_string());
+                }
+            }
+        }
+
+        #[cfg(not(target_os = "linux"))]
+        {
+            match arboard::Clipboard::new() {
+                Ok(mut clipboard) => {
+                    match clipboard.set_text(content) {
+                        Ok(_) => self.status_message = Some("Copied to clipboard".to_string()),
+                        Err(e) => self.status_message = Some(format!("Copy failed: {}", e)),
+                    }
+                }
+                Err(e) => {
+                    self.status_message = Some(format!("Clipboard error: {}", e));
+                }
+            }
         }
     }
 
@@ -728,10 +908,20 @@ impl App {
     fn save_settings(&mut self) -> Result<()> {
         let store = SettingsStore::new(&self.db.conn);
 
-        store.set("anthropic_key", &self.settings_state.anthropic_key)?;
-        store.set("anthropic_model", &self.settings_state.anthropic_model)?;
-        store.set("openai_key", &self.settings_state.openai_key)?;
-        store.set("export_path", &self.settings_state.export_path)?;
+        // Trim whitespace from values before saving
+        let api_key = self.settings_state.api_key.trim();
+        let llm_model = self.settings_state.llm_model.trim();
+        let export_path = self.settings_state.export_path.trim();
+
+        store.set("llm_provider", self.settings_state.provider.display_name())?;
+        store.set("api_key", api_key)?;
+        store.set("llm_model", llm_model)?;
+        store.set("export_path", export_path)?;
+
+        // Update state with trimmed values
+        self.settings_state.api_key = api_key.to_string();
+        self.settings_state.llm_model = llm_model.to_string();
+        self.settings_state.export_path = export_path.to_string();
 
         self.settings_state.has_changes = false;
         self.status_message = Some("Settings saved".to_string());

@@ -61,12 +61,27 @@ pub struct AiPopupState {
     pub custom_input: String,
     pub cursor_pos: usize,
     pub is_loading: bool,
+    pub loading_tick: usize,
     pub result: Option<String>,
     pub error: Option<String>,
 }
 
-
 impl AiPopupState {
+    pub fn tick_loading(&mut self) {
+        if self.is_loading {
+            self.loading_tick = (self.loading_tick + 1) % 4;
+        }
+    }
+
+    pub fn loading_spinner(&self) -> &'static str {
+        match self.loading_tick {
+            0 => "⠋",
+            1 => "⠙",
+            2 => "⠹",
+            _ => "⠸",
+        }
+    }
+
     pub fn select_next(&mut self) {
         self.selected_action = (self.selected_action + 1) % AiAction::all().len();
     }
@@ -233,16 +248,22 @@ fn draw_custom_input(frame: &mut Frame, area: Rect, state: &AiPopupState) {
 }
 
 fn draw_result(frame: &mut Frame, area: Rect, state: &AiPopupState, content_preview: &str) {
+    let title = if state.is_loading {
+        format!(" {} Processing... ", state.loading_spinner())
+    } else {
+        " Preview ".to_string()
+    };
+
     let block = Block::default()
-        .title(" Preview ")
+        .title(title)
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::DarkGray));
+        .border_style(Style::default().fg(if state.is_loading { Color::Yellow } else { Color::DarkGray }));
 
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
     let content = if state.is_loading {
-        Paragraph::new("Processing...")
+        Paragraph::new("Waiting for AI response...")
             .style(Style::default().fg(Color::Yellow))
     } else if let Some(ref error) = state.error {
         Paragraph::new(error.as_str())

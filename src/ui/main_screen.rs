@@ -240,6 +240,7 @@ fn draw_status_bar(frame: &mut Frame, area: Rect, app: &App) {
         ("dd ", "delete"),
         ("x ", "export"),
         ("Enter ", "view"),
+        ("s ", "settings"),
         ("? ", "help"),
         ("q ", "quit"),
     ];

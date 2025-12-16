@@ -10,7 +10,7 @@ mod ai_popup;
 pub use view_screen::ViewState;
 pub use edit_screen::{EditState, EditField};
 pub use search::SearchState;
-pub use settings_screen::SettingsState;
+pub use settings_screen::{SettingsState, SettingsField, LlmProvider};
 pub use help_screen::HelpState;
 pub use dialog::ConfirmDialog;
 pub use ai_popup::AiPopupState;
@@ -45,8 +45,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
 
     if app.show_ai_popup {
         let content = app.edit_state.item.content.clone();
-        let has_llm = !app.settings_state.anthropic_key.is_empty()
-            || !app.settings_state.openai_key.is_empty();
+        let has_llm = !app.settings_state.api_key.is_empty();
         ai_popup::draw(frame, &app.ai_popup_state, &content, has_llm);
     }
 }

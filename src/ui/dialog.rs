@@ -41,7 +41,7 @@ impl ConfirmDialog {
 }
 
 pub fn draw(frame: &mut Frame, dialog: &ConfirmDialog) {
-    let area = centered_rect(50, 30, frame.area());
+    let area = centered_rect_fixed(50, 7, frame.area());
 
     // Clear the area behind the popup
     frame.render_widget(Clear, area);
@@ -57,8 +57,8 @@ pub fn draw(frame: &mut Frame, dialog: &ConfirmDialog) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Min(3),     // Message
-            Constraint::Length(3),  // Buttons
+            Constraint::Length(2), // Message
+            Constraint::Length(1), // Buttons
         ])
         .split(inner);
 
@@ -100,16 +100,19 @@ pub fn draw(frame: &mut Frame, dialog: &ConfirmDialog) {
     frame.render_widget(confirm_btn, button_chunks[1]);
 }
 
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+fn centered_rect_fixed(percent_x: u16, height: u16, r: Rect) -> Rect {
+    // Center vertically with fixed height
+    let vertical_padding = r.height.saturating_sub(height) / 2;
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Percentage((100 - percent_y) / 2),
-            Constraint::Percentage(percent_y),
-            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Length(vertical_padding),
+            Constraint::Length(height),
+            Constraint::Min(0),
         ])
         .split(r);
 
+    // Center horizontally with percentage width
     Layout::default()
         .direction(Direction::Horizontal)
         .constraints([

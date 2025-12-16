@@ -22,6 +22,15 @@ impl SearchState {
         self.cursor_pos += 1;
     }
 
+    pub fn insert_str(&mut self, s: &str) {
+        // Filter out control characters for search
+        let clean: String = s.chars().filter(|c| !c.is_control()).collect();
+        for (i, c) in clean.chars().enumerate() {
+            self.query.insert(self.cursor_pos + i, c);
+        }
+        self.cursor_pos += clean.chars().count();
+    }
+
     pub fn delete_char(&mut self) {
         if self.cursor_pos > 0 {
             self.query.remove(self.cursor_pos - 1);
