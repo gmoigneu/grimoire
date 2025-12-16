@@ -29,6 +29,9 @@ pub struct Item {
     pub tags: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+
+    // Version tracking
+    pub version: i64,
 }
 
 impl Item {
@@ -48,6 +51,7 @@ impl Item {
             tags: None,
             created_at: None,
             updated_at: None,
+            version: 1,
         }
     }
 
@@ -55,6 +59,7 @@ impl Item {
         let category_str: String = row.get(2)?;
         let created_str: Option<String> = row.get(12)?;
         let updated_str: Option<String> = row.get(13)?;
+        let version: Option<i64> = row.get(14).ok();
 
         Ok(Self {
             id: Some(row.get(0)?),
@@ -71,6 +76,7 @@ impl Item {
             tags: row.get(11)?,
             created_at: created_str.and_then(|s| parse_sqlite_datetime(&s)),
             updated_at: updated_str.and_then(|s| parse_sqlite_datetime(&s)),
+            version: version.unwrap_or(1),
         })
     }
 

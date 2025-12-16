@@ -85,8 +85,54 @@ impl Database {
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             );
+
+            -- Item versions table for version history
+            CREATE TABLE IF NOT EXISTS item_versions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                item_id INTEGER NOT NULL,
+                version INTEGER NOT NULL,
+
+                -- Snapshot of all item fields at this version
+                name TEXT NOT NULL,
+                category TEXT NOT NULL,
+                description TEXT,
+                content TEXT NOT NULL,
+                model TEXT,
+                tools TEXT,
+                allowed_tools TEXT,
+                argument_hint TEXT,
+                permission_mode TEXT,
+                skills TEXT,
+                tags TEXT,
+
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+                FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_versions_item ON item_versions(item_id, version DESC);
             "#,
         )?;
+
+        // Run migrations for existing databases
+        self.run_migrations()?;
+
+        Ok(())
+    }
+
+    fn run_migrations(&self) -> Result<()> {
+        // Migration: Add version column to items table
+        let has_version_column: bool = self
+            .conn
+            .prepare("SELECT version FROM items LIMIT 1")
+            .is_ok();
+
+        if !has_version_column {
+            self.conn.execute(
+                "ALTER TABLE items ADD COLUMN version INTEGER DEFAULT 1",
+                [],
+            )?;
+        }
 
         Ok(())
     }

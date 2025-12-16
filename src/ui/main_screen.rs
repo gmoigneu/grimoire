@@ -166,6 +166,7 @@ fn draw_item_list(frame: &mut Frame, area: Rect, app: &mut App) {
     let header = Row::new(vec![
         Cell::from("NAME").style(HEADER_STYLE),
         Cell::from("CATEGORY").style(HEADER_STYLE),
+        Cell::from("VER").style(HEADER_STYLE),
         Cell::from("TAGS").style(HEADER_STYLE),
         Cell::from("UPDATED").style(HEADER_STYLE),
     ])
@@ -195,6 +196,7 @@ fn draw_item_list(frame: &mut Frame, area: Rect, app: &mut App) {
             Row::new(vec![
                 Cell::from(item.name.clone()),
                 Cell::from(item.category.display_name()),
+                Cell::from(format!("v{}", item.version)).style(dim_style),
                 Cell::from(tags_short).style(dim_style),
                 Cell::from(item.updated_ago()).style(dim_style),
             ])
@@ -205,6 +207,7 @@ fn draw_item_list(frame: &mut Frame, area: Rect, app: &mut App) {
     let widths = [
         Constraint::Min(15),
         Constraint::Length(10),
+        Constraint::Length(4),
         Constraint::Length(15),
         Constraint::Length(12),
     ];

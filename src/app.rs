@@ -3,8 +3,8 @@ use crate::export::ClaudeExporter;
 use crate::llm::{complete_sync, LlmRequest, LlmResponse};
 use crate::models::{Category, Item};
 use crate::ui::{
-    AiPopupState, ConfirmDialog, EditField, EditState, HelpState, LlmProvider, SearchState,
-    SettingsField, SettingsState, ViewState,
+    AiPopupState, ConfirmDialog, EditField, EditState, HelpState, HistoryState, LlmProvider,
+    SearchState, SettingsField, SettingsState, ViewState,
 };
 use color_eyre::eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
@@ -61,6 +61,8 @@ pub struct App {
     pub confirm_dialog: Option<ConfirmDialog>,
     pub show_ai_popup: bool,
     pub ai_popup_state: AiPopupState,
+    pub show_history_popup: bool,
+    pub history_state: Option<HistoryState>,
 
     // Background task receiver for LLM responses
     pub llm_receiver: Option<Receiver<Result<LlmResponse, String>>>,
@@ -111,6 +113,8 @@ impl App {
             confirm_dialog: None,
             show_ai_popup: false,
             ai_popup_state: AiPopupState::default(),
+            show_history_popup: false,
+            history_state: None,
             llm_receiver: None,
             status_message: None,
         };
@@ -231,6 +235,11 @@ impl App {
             return self.handle_ai_popup_key(key);
         }
 
+        // Handle history popup
+        if self.show_history_popup {
+            return self.handle_history_popup_key(key);
+        }
+
         // Check for pending vim sequences
         if let Some(pending) = self.pending_key.take() {
             return self.handle_vim_sequence(pending, key.code);
@@ -334,7 +343,11 @@ impl App {
 
     fn handle_view_key(&mut self, key: KeyEvent) -> Result<()> {
         match key.code {
-            KeyCode::Esc | KeyCode::Char('q') => self.screen = Screen::Main,
+            KeyCode::Esc | KeyCode::Char('q') => {
+                // Reset viewing version when leaving view screen
+                self.view_state.viewing_version = None;
+                self.screen = Screen::Main;
+            }
             KeyCode::Char('j') | KeyCode::Down => {
                 if self.view_state.scroll < self.view_state.max_scroll {
                     self.view_state.scroll += 1;
@@ -348,6 +361,8 @@ impl App {
             KeyCode::Char('y') => self.pending_key = Some('y'),
             KeyCode::Char('d') => self.pending_key = Some('d'),
             KeyCode::Char('x') => self.export_selected()?,
+            KeyCode::Char('h') => self.open_history_popup()?,
+            KeyCode::Char('L') => self.go_to_latest_version()?,
             KeyCode::Char('a') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 // Load current item into edit_state for AI to work with
                 if let Some(item) = self.selected_item().cloned() {
@@ -734,7 +749,9 @@ impl App {
 
     fn view_selected(&mut self) -> Result<()> {
         if !self.items.is_empty() {
+            let item = &self.items[self.selected_item_index];
             self.view_state = ViewState::default();
+            self.view_state.max_version = item.version;
             self.screen = Screen::View;
         }
         Ok(())
@@ -938,5 +955,120 @@ impl App {
             .find(|(c, _)| *c == category)
             .map(|(_, count)| *count)
             .unwrap_or(0)
+    }
+
+    fn open_history_popup(&mut self) -> Result<()> {
+        if let Some(item) = self.selected_item() {
+            if let Some(item_id) = item.id {
+                let store = ItemStore::new(&self.db.conn);
+                let versions = store.list_versions(item_id)?;
+                let item_name = item.name.clone();
+                self.history_state = Some(HistoryState::new(versions, item_name));
+                self.show_history_popup = true;
+            }
+        }
+        Ok(())
+    }
+
+    fn go_to_latest_version(&mut self) -> Result<()> {
+        self.view_state.viewing_version = None;
+        self.view_state.scroll = 0;
+        // Refresh item data to show the latest version
+        self.refresh_data()?;
+        Ok(())
+    }
+
+    fn handle_history_popup_key(&mut self, key: KeyEvent) -> Result<()> {
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('q') => {
+                self.show_history_popup = false;
+                self.history_state = None;
+            }
+            KeyCode::Char('j') | KeyCode::Down => {
+                if let Some(ref mut state) = self.history_state {
+                    state.select_next();
+                }
+            }
+            KeyCode::Char('k') | KeyCode::Up => {
+                if let Some(ref mut state) = self.history_state {
+                    state.select_previous();
+                }
+            }
+            KeyCode::Enter => {
+                // View the selected version
+                self.view_selected_version()?;
+            }
+            KeyCode::Char('r') => {
+                // Restore to selected version
+                self.restore_selected_version()?;
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    fn view_selected_version(&mut self) -> Result<()> {
+        if let Some(ref state) = self.history_state {
+            if let Some(version) = state.selected_version() {
+                let version_num = version.version;
+                let is_current = version.is_current;
+
+                if let Some(item) = self.selected_item() {
+                    if let Some(item_id) = item.id {
+                        if is_current {
+                            // Just close popup and show current version
+                            self.view_state.viewing_version = None;
+                        } else {
+                            // Load the historical version
+                            let store = ItemStore::new(&self.db.conn);
+                            if let Some(old_item) = store.get_version(item_id, version_num)? {
+                                // Update the item in the list temporarily for viewing
+                                if let Some(current_item) = self.items.get_mut(self.selected_item_index) {
+                                    // Store max_version before overwriting
+                                    let max_version = current_item.version;
+                                    *current_item = old_item;
+                                    self.view_state.max_version = max_version;
+                                }
+                            }
+                            self.view_state.viewing_version = Some(version_num);
+                        }
+                        self.view_state.scroll = 0;
+                    }
+                }
+            }
+        }
+        self.show_history_popup = false;
+        self.history_state = None;
+        Ok(())
+    }
+
+    fn restore_selected_version(&mut self) -> Result<()> {
+        if let Some(ref state) = self.history_state {
+            if let Some(version) = state.selected_version() {
+                let version_num = version.version;
+
+                if let Some(item) = self.selected_item() {
+                    if let Some(item_id) = item.id {
+                        let store = ItemStore::new(&self.db.conn);
+                        store.restore_version(item_id, version_num)?;
+
+                        // Refresh and reset view
+                        self.refresh_data()?;
+                        self.view_state.viewing_version = None;
+                        self.view_state.scroll = 0;
+
+                        // Update max_version to reflect the new version
+                        if let Some(item) = self.selected_item() {
+                            self.view_state.max_version = item.version;
+                        }
+
+                        self.status_message = Some(format!("Restored to version {}", version_num));
+                    }
+                }
+            }
+        }
+        self.show_history_popup = false;
+        self.history_state = None;
+        Ok(())
     }
 }

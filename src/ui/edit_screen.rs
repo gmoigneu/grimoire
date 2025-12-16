@@ -552,21 +552,34 @@ fn render_multiline_with_cursor(content: &str, cursor_pos: usize) -> Vec<Line<'s
             let col = cursor_col.min(chars.len());
 
             let before: String = chars.iter().take(col).collect();
-            let cursor_char = chars.get(col).copied().unwrap_or(' ');
             let after: String = chars.iter().skip(col + 1).collect();
 
-            let line = Line::from(vec![
-                Span::raw(before),
-                Span::styled(
-                    cursor_char.to_string(),
-                    Style::default().bg(Color::White).fg(Color::Black),
-                ),
-                Span::raw(after),
-            ]);
-            result.push(line);
+            // Build spans, avoiding empty ones that can cause rendering issues
+            let mut spans = Vec::new();
+            if !before.is_empty() {
+                spans.push(Span::raw(before));
+            }
+
+            // For cursor character: use actual char if available, space if at end/empty line
+            let cursor_char = chars.get(col).copied().unwrap_or(' ');
+            spans.push(Span::styled(
+                cursor_char.to_string(),
+                Style::default().bg(Color::White).fg(Color::Black),
+            ));
+
+            if !after.is_empty() {
+                spans.push(Span::raw(after));
+            }
+
+            result.push(Line::from(spans));
         } else {
-            // No cursor on this line
-            result.push(Line::raw(line_text.to_string()));
+            // No cursor on this line - ensure empty lines still have height
+            // by using a space character (invisible but maintains line height)
+            if line_text.is_empty() {
+                result.push(Line::raw(" "));
+            } else {
+                result.push(Line::raw(line_text.to_string()));
+            }
         }
     }
 

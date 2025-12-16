@@ -6,6 +6,7 @@ mod settings_screen;
 mod help_screen;
 mod dialog;
 mod ai_popup;
+mod history_popup;
 
 pub use view_screen::ViewState;
 pub use edit_screen::{EditState, EditField};
@@ -14,6 +15,7 @@ pub use settings_screen::{SettingsState, SettingsField, LlmProvider};
 pub use help_screen::HelpState;
 pub use dialog::ConfirmDialog;
 pub use ai_popup::AiPopupState;
+pub use history_popup::HistoryState;
 
 use crate::app::{App, Screen};
 use ratatui::Frame;
@@ -47,5 +49,11 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         let content = app.edit_state.item.content.clone();
         let has_llm = !app.settings_state.api_key.is_empty();
         ai_popup::draw(frame, &app.ai_popup_state, &content, has_llm);
+    }
+
+    if app.show_history_popup {
+        if let Some(ref mut history_state) = app.history_state {
+            history_popup::draw(frame, history_state);
+        }
     }
 }
